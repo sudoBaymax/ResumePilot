@@ -131,7 +131,7 @@ export async function checkSubscriptionAccess(
 
 function getActionLimit(planName: PlanType, action: "interview" | "cover_letter"): number {
   const limits = {
-    starter: { interview: 1, cover_letter: 0 },
+    starter: { interview: 5000, cover_letter: 0 }, // Temporarily increased for testing
     pro: { interview: 10, cover_letter: 0 },
     career: { interview: 30, cover_letter: 3 },
     coach: { interview: -1, cover_letter: -1 },
