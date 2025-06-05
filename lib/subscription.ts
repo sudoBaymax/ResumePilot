@@ -153,11 +153,11 @@ export async function canUserPerformAction(
     return { allowed: false, reason: "Unable to fetch usage data" }
   }
 
-  // Special handling for starter plan (one-time purchase)
+  // Special handling for starter plan (one-time purchase) - temporarily increased limit for testing
   if (subscription.plan_name === "starter") {
     if (action === "interview") {
-      if (usage.interviews_used >= 1) {
-        return { allowed: false, reason: "You've used your one-time interview session" }
+      if (usage.interviews_used >= 5000) {
+        return { allowed: false, reason: "You've reached your interview limit (5000)" }
       }
       return { allowed: true }
     }

@@ -52,8 +52,8 @@ export async function checkSubscriptionAccess(
         }
       }
 
-      // For interview, check if they've used their one interview
-      if (action === "interview" && usage && usage.interviews_used >= 1) {
+      // For interview, check if they've used their interview limit (5000 for testing)
+      if (action === "interview" && usage && usage.interviews_used >= 5000) {
         return {
           allowed: false,
           reason: "You've used your one-time interview session",
@@ -61,7 +61,7 @@ export async function checkSubscriptionAccess(
           usage: {
             interviews_used: usage.interviews_used,
             cover_letters_used: usage.cover_letters_used || 0,
-            interviews_limit: 1,
+            interviews_limit: 5000,
             cover_letters_limit: 0,
           },
           upgradeRequired: true,
