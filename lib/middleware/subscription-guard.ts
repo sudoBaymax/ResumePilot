@@ -42,6 +42,43 @@ export async function checkSubscriptionAccess(
       }
     }
 
+    // Special handling for starter plan (one-time purchase)
+    if (subscription.plan_name === "starter") {
+      // For starter plan, allow template access and PDF export
+      if (action === "template_access" || action === "export_pdf") {
+        return {
+          allowed: true,
+          currentPlan: "starter",
+        }
+      }
+
+      // For interview, check if they've used their one interview
+      if (action === "interview" && usage && usage.interviews_used >= 1) {
+        return {
+          allowed: false,
+          reason: "You've used your one-time interview session",
+          currentPlan: "starter",
+          usage: {
+            interviews_used: usage.interviews_used,
+            cover_letters_used: usage.cover_letters_used || 0,
+            interviews_limit: 1,
+            cover_letters_limit: 0,
+          },
+          upgradeRequired: true,
+        }
+      }
+
+      // For cover letter, deny access for starter plan
+      if (action === "cover_letter") {
+        return {
+          allowed: false,
+          reason: "Cover letters are not included in the Starter plan",
+          currentPlan: "starter",
+          upgradeRequired: true,
+        }
+      }
+    }
+
     // For basic actions like template access and PDF export, check plan features
     if (action === "template_access" || action === "export_pdf") {
       return {
