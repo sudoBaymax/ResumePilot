@@ -5,6 +5,16 @@ import { createClient } from "@supabase/supabase-js"
 // Create server-side Supabase client
 const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+}
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders })
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { planKey, userId, billingCycle } = await request.json()
@@ -64,8 +74,8 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: planKey === "starter" ? "payment" : "subscription",
-      success_url: `${request.nextUrl.origin}/dashboard?success=true&plan=${planKey}`,
-      cancel_url: `${request.nextUrl.origin}/pricing?canceled=true`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin}/dashboard?success=true&plan=${planKey}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin}/pricing?canceled=true`,
       metadata: {
         userId: userId,
         planName: planKey,
@@ -73,7 +83,15 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    return NextResponse.json({ sessionId: session.id, url: session.url })
+    return NextResponse.json(
+      {
+        sessionId: session.id,
+        url: session.url,
+      },
+      {
+        headers: corsHeaders,
+      },
+    )
   } catch (error) {
     console.error("Error creating checkout session:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

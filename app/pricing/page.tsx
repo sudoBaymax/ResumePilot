@@ -25,9 +25,6 @@ import { useAuth } from "@/components/auth/auth-provider"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
-import { loadStripe } from "@stripe/stripe-js"
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 const pricingPlans = [
   {
@@ -204,22 +201,9 @@ export default function PricingPage() {
       return
     }
 
-    // TEMPORARY: Show alert instead of processing payment
-    toast({
-      title: "Setup Required",
-      description: "Please create Stripe products and update price IDs in lib/stripe.ts first.",
-      variant: "destructive",
-    })
-    return
-
-    // UNCOMMENT THIS SECTION AFTER UPDATING PRICE IDs:
-    /*
     setProcessingPlan(planId)
 
     try {
-      const stripe = await stripePromise
-      if (!stripe) throw new Error("Stripe not loaded")
-
       const response = await fetch("/api/stripe/create-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -230,27 +214,33 @@ export default function PricingPage() {
         }),
       })
 
-      const { sessionId, error } = await response.json()
-
-      if (error) {
-        throw new Error(error)
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Server error: ${response.status} - ${errorText}`)
       }
 
-      const { error: stripeError } = await stripe.redirectToCheckout({ sessionId })
-      if (stripeError) {
-        throw new Error(stripeError.message)
+      const data = await response.json()
+
+      if (data.error) {
+        throw new Error(data.error)
+      }
+
+      // Use direct URL redirect
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        throw new Error("No checkout URL received")
       }
     } catch (error) {
       console.error("Payment error:", error)
       toast({
         title: "Error",
-        description: "Failed to start payment process. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to start payment process. Please try again.",
         variant: "destructive",
       })
     } finally {
       setProcessingPlan(null)
     }
-    */
   }
 
   const toggleFeatures = (planId: string) => {
@@ -317,30 +307,6 @@ export default function PricingPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Setup Notice */}
-        <div className="mb-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  fillRule="evenodd"
-                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-yellow-800">Setup Required</h3>
-              <div className="mt-2 text-sm text-yellow-700">
-                <p>
-                  To enable payments, please create Stripe products and update the price IDs in{" "}
-                  <code>lib/stripe.ts</code>.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Hero Section */}
         <div className="text-center space-y-6 mb-16">
           <h1 className="text-4xl lg:text-5xl font-bold text-gray-900">
