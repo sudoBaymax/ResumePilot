@@ -28,7 +28,7 @@ export interface UsageTracking {
 // Plan limits
 export const PLAN_LIMITS = {
   starter: {
-    interviews: 1,
+    interviews: 5000, // Temporarily increased for testing
     coverLetters: 0,
     templates: 1,
     features: ["basic_ats", "pdf_export", "star_xyz_format"],
