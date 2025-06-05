@@ -20,6 +20,7 @@ import {
   Users,
   ChevronUp,
   Loader2,
+  ExternalLink,
 } from "lucide-react"
 import { useAuth } from "@/components/auth/auth-provider"
 import { useRouter } from "next/navigation"
@@ -175,6 +176,7 @@ export default function PricingPage() {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly")
   const [expandedFeatures, setExpandedFeatures] = useState<string[]>([])
   const [processingPlan, setProcessingPlan] = useState<string | null>(null)
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
 
   if (loading) {
     return (
@@ -202,6 +204,7 @@ export default function PricingPage() {
     }
 
     setProcessingPlan(planId)
+    setCheckoutUrl(null)
 
     try {
       const response = await fetch("/api/stripe/create-checkout", {
@@ -225,9 +228,13 @@ export default function PricingPage() {
         throw new Error(data.error)
       }
 
-      // Use direct URL redirect
+      // Instead of redirecting, store the URL and show a button
       if (data.url) {
-        window.location.href = data.url
+        setCheckoutUrl(data.url)
+        toast({
+          title: "Checkout Ready",
+          description: "Click the button to complete your purchase in a new tab",
+        })
       } else {
         throw new Error("No checkout URL received")
       }
@@ -304,6 +311,30 @@ export default function PricingPage() {
           </div>
         </div>
       </header>
+
+      {/* Checkout Modal */}
+      {checkoutUrl && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold mb-4">Complete Your Purchase</h3>
+            <p className="text-gray-600 mb-6">
+              Click the button below to open Stripe checkout in a new tab and complete your purchase.
+            </p>
+            <div className="flex flex-col gap-3">
+              <Button
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
+                onClick={() => window.open(checkoutUrl, "_blank")}
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Open Checkout
+              </Button>
+              <Button variant="outline" className="w-full" onClick={() => setCheckoutUrl(null)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
