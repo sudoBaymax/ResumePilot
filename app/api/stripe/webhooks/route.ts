@@ -3,7 +3,12 @@ import { stripe } from "@/lib/stripe"
 import { createClient } from "@supabase/supabase-js"
 import type Stripe from "stripe"
 
-const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+})
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
@@ -71,32 +76,88 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return
   }
 
+  console.log(`Processing checkout for user ${userId}, plan ${planName}`)
+
   // For one-time payments (starter plan)
   if (session.mode === "payment") {
-    // Record payment
-    await supabaseAdmin.from("payments").insert({
-      user_id: userId,
-      stripe_payment_intent_id: session.payment_intent as string,
-      amount: session.amount_total!,
-      currency: session.currency!,
-      status: "succeeded",
-      plan_name: planName,
-    })
+    try {
+      // Record payment
+      const { error: paymentError } = await supabaseAdmin.from("payments").insert({
+        user_id: userId,
+        stripe_payment_intent_id: session.payment_intent as string,
+        amount: session.amount_total!,
+        currency: session.currency!,
+        status: "succeeded",
+        plan_name: planName,
+      })
 
-    // Create subscription record for starter plan with active status
-    await supabaseAdmin.from("subscriptions").upsert({
-      user_id: userId,
-      stripe_customer_id: session.customer as string,
-      plan_name: planName,
-      status: "active",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      // Set a far future end date for one-time purchases
-      current_period_start: new Date().toISOString(),
-      current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
-    })
+      if (paymentError) {
+        console.error("Error recording payment:", paymentError)
+      }
 
-    console.log(`Successfully processed one-time payment for user ${userId}, plan ${planName}`)
+      // Check if subscription already exists
+      const { data: existingSubscription } = await supabaseAdmin
+        .from("subscriptions")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle()
+
+      const subscriptionData = {
+        user_id: userId,
+        stripe_customer_id: session.customer as string,
+        plan_name: planName,
+        status: "active",
+        current_period_start: new Date().toISOString(),
+        current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
+        cancel_at_period_end: false,
+        updated_at: new Date().toISOString(),
+      }
+
+      if (existingSubscription) {
+        // Update existing subscription
+        const { error: updateError } = await supabaseAdmin
+          .from("subscriptions")
+          .update(subscriptionData)
+          .eq("id", existingSubscription.id)
+
+        if (updateError) {
+          console.error("Error updating subscription:", updateError)
+        } else {
+          console.log(`Successfully updated subscription for user ${userId}`)
+        }
+      } else {
+        // Create new subscription
+        const { error: insertError } = await supabaseAdmin.from("subscriptions").insert({
+          ...subscriptionData,
+          created_at: new Date().toISOString(),
+        })
+
+        if (insertError) {
+          console.error("Error creating subscription:", insertError)
+          // Log the error but don't fail the webhook
+        } else {
+          console.log(`Successfully created subscription for user ${userId}`)
+        }
+      }
+
+      // Initialize usage tracking
+      const { error: usageError } = await supabaseAdmin.from("usage_tracking").upsert({
+        user_id: userId,
+        month_year: new Date().toISOString().slice(0, 7),
+        interviews_used: 0,
+        cover_letters_used: 0,
+        updated_at: new Date().toISOString(),
+      })
+
+      if (usageError) {
+        console.error("Error initializing usage tracking:", usageError)
+      }
+
+      console.log(`Successfully processed one-time payment for user ${userId}, plan ${planName}`)
+    } catch (error) {
+      console.error("Error in handleCheckoutCompleted:", error)
+      // Don't throw - we don't want to fail the webhook
+    }
   } else if (session.mode === "subscription") {
     // Handle subscription creation
     const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
