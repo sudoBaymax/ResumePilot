@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
 
   try {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
+    console.log(`Processing Stripe webhook event: ${event.type}`)
   } catch (error) {
     console.error("Webhook signature verification failed:", error)
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest) {
   try {
     switch (event.type) {
       case "checkout.session.completed":
+        console.log("Processing checkout.session.completed event")
         await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session)
         break
 
@@ -81,7 +83,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       plan_name: planName,
     })
 
-    // Create subscription record for starter plan
+    // Create subscription record for starter plan with active status
     await supabaseAdmin.from("subscriptions").upsert({
       user_id: userId,
       stripe_customer_id: session.customer as string,
@@ -89,7 +91,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       status: "active",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      // Set a far future end date for one-time purchases
+      current_period_start: new Date().toISOString(),
+      current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
     })
+
+    console.log(`Successfully processed one-time payment for user ${userId}, plan ${planName}`)
   } else if (session.mode === "subscription") {
     // Handle subscription creation
     const subscription = await stripe.subscriptions.retrieve(session.subscription as string)

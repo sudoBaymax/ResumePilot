@@ -65,21 +65,45 @@ export type PlanType = keyof typeof PLAN_LIMITS
 
 // Get user's current subscription
 export async function getUserSubscription(userId: string): Promise<Subscription | null> {
-  const { data, error } = await supabase
-    .from("subscriptions")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(1)
+  try {
+    // First check for active subscriptions
+    const { data: activeSubscriptions, error: activeError } = await supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
 
-  if (error) {
-    console.error("Error fetching subscription:", error)
+    if (activeError) {
+      console.error("Error fetching active subscription:", activeError)
+      return null
+    }
+
+    // If we found an active subscription, return it
+    if (activeSubscriptions && activeSubscriptions.length > 0) {
+      return activeSubscriptions[0]
+    }
+
+    // If no active subscription, check for any subscription (might be inactive)
+    const { data: anySubscription, error: anyError } = await supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+
+    if (anyError) {
+      console.error("Error fetching any subscription:", anyError)
+      return null
+    }
+
+    // Return the first (most recent) subscription or null if none found
+    return anySubscription && anySubscription.length > 0 ? anySubscription[0] : null
+  } catch (error) {
+    console.error("Error in getUserSubscription:", error)
     return null
   }
-
-  // Return the first (most recent) subscription or null if none found
-  return data && data.length > 0 ? data[0] : null
 }
 
 // Get user's current usage for this month
@@ -127,6 +151,20 @@ export async function canUserPerformAction(
 
   if (!usage) {
     return { allowed: false, reason: "Unable to fetch usage data" }
+  }
+
+  // Special handling for starter plan (one-time purchase)
+  if (subscription.plan_name === "starter") {
+    if (action === "interview") {
+      if (usage.interviews_used >= 1) {
+        return { allowed: false, reason: "You've used your one-time interview session" }
+      }
+      return { allowed: true }
+    }
+
+    if (action === "cover_letter") {
+      return { allowed: false, reason: "Cover letters are not included in the Starter plan" }
+    }
   }
 
   const planLimits = PLAN_LIMITS[subscription.plan_name as PlanType]

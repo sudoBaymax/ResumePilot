@@ -12,6 +12,7 @@ import Link from "next/link"
 import { useState } from "react"
 import { SubscriptionManager } from "@/components/subscription/subscription-manager"
 import { UsageWarning } from "@/components/subscription/usage-warning"
+import { SubscriptionFixer } from "@/components/subscription/subscription-fixer"
 
 const resumeTemplates = [
   {
@@ -247,7 +248,10 @@ export default function DashboardPage() {
                 <h1 className="text-3xl lg:text-4xl font-bold text-gray-900">Subscription Management</h1>
                 <p className="text-xl text-gray-600">Manage your plan, usage, and billing</p>
               </div>
-              <SubscriptionManager onUpgrade={handleUpgrade} />
+              <div className="space-y-6">
+                <SubscriptionFixer />
+                <SubscriptionManager onUpgrade={handleUpgrade} />
+              </div>
             </div>
           </TabsContent>
         </Tabs>
