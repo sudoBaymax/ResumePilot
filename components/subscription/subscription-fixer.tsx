@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/components/auth/auth-provider"
 import { useToast } from "@/hooks/use-toast"
+import { supabase } from "@/lib/supabase"
 import { AlertTriangle, Loader2, CheckCircle } from "lucide-react"
 
 export function SubscriptionFixer() {
@@ -18,10 +19,27 @@ export function SubscriptionFixer() {
 
     setLoading(true)
     try {
-      const response = await fetch("/api/subscription/fix-subscription", {
+      // Get the user's session token
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session?.access_token) {
+        toast({
+          title: "Authentication Error",
+          description: "Please sign out and sign back in, then try again.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const response = await fetch("/api/subscription/fix-subscription-user", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ planName: "starter" }),
       })
 
       const data = await response.json()
@@ -34,16 +52,35 @@ export function SubscriptionFixer() {
         })
         setFixed(true)
       } else {
-        toast({
-          title: "Error",
-          description: data.error || "Failed to fix subscription",
-          variant: "destructive",
+        // If the new endpoint fails, try the original one
+        const fallbackResponse = await fetch("/api/subscription/fix-subscription", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: user.id }),
         })
+
+        const fallbackData = await fallbackResponse.json()
+
+        if (fallbackResponse.ok) {
+          toast({
+            title: "Subscription Fixed",
+            description: "Your subscription has been successfully updated. You may need to refresh the page.",
+            variant: "default",
+          })
+          setFixed(true)
+        } else {
+          toast({
+            title: "Error",
+            description: fallbackData.error || data.error || "Failed to fix subscription",
+            variant: "destructive",
+          })
+        }
       }
     } catch (error) {
+      console.error("Error fixing subscription:", error)
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: "An unexpected error occurred. Please try refreshing the page and trying again.",
         variant: "destructive",
       })
     } finally {
@@ -83,7 +120,7 @@ export function SubscriptionFixer() {
           If you've made a payment but your subscription isn't showing as active, we can fix that for you.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
         <Button onClick={handleFixSubscription} disabled={loading} className="w-full">
           {loading ? (
             <>
@@ -94,6 +131,14 @@ export function SubscriptionFixer() {
             "Fix My Subscription"
           )}
         </Button>
+        <div className="text-xs text-gray-600">
+          <p>This will:</p>
+          <ul className="list-disc list-inside mt-1 space-y-1">
+            <li>Create or update your subscription record</li>
+            <li>Set your plan to "Starter" (1 interview)</li>
+            <li>Reset your usage counter</li>
+          </ul>
+        </div>
       </CardContent>
     </Card>
   )
