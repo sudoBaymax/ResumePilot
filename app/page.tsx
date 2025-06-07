@@ -35,7 +35,7 @@ export default function LandingPage() {
                   src="/images/resumepilot-logo.png"
                   alt="ResumePilot Logo"
                   className="object-contain"
-                  style={{ width: "44px", height: "44px", borderRadius: "7px" }}
+                  style={{ width: "40px", height: "40px", borderRadius: "9px" }}
                 />
               </div>
               <span className="text-xl font-bold text-gray-900">ResumePilot</span>
