@@ -399,6 +399,7 @@ export default function LandingPage() {
                     src="/images/resumepilot-logo.png"
                     alt="ResumePilot Logo"
                     className="object-contain"
+                    style={width:"40px", height:"40px", borderRadius:"9px"}
                     onError={(e) => {
                       e.currentTarget.style.display = "none"
                       e.currentTarget.parentElement!.innerHTML = '<div class="text-white text-xs font-bold">RP</div>'
