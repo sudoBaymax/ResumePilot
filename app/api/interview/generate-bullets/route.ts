@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { supabase } from "@/lib/supabase"
 import { createClient } from "@supabase/supabase-js"
 import { OpenAI } from "openai"
 
@@ -7,8 +8,12 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
-// Create Supabase client
-const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+// Create Supabase admin client
+const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+  auth: {
+    persistSession: false,
+  },
+})
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,12 +25,11 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.replace("Bearer ", "")
 
-    // Verify user with Supabase
-    const supabaseUser = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+    // Verify user with Supabase using the singleton client
     const {
       data: { user },
       error: authError,
-    } = await supabaseUser.auth.getUser(token)
+    } = await supabase.auth.getUser(token)
 
     if (authError || !user) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
@@ -106,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     console.log("Generated bullets:", bullets)
 
-    // Store bullets in Supabase
+    // Store bullets in Supabase using admin client
     try {
       const { error: bulletsError } = await supabaseAdmin.from("resume_bullets").insert({
         user_id: user.id,
