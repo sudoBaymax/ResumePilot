@@ -123,11 +123,12 @@ export default function DashboardPage() {
           <div className="flex justify-between items-center h-16">
             {/* Update the logo in the header */}
             <div className="flex items-center space-x-2">
-              <div className="w-12 h-12 rounded-lg border-[25px] border-blue-200 p-1 bg-gradient-to-r from-blue-600 to-purple-600">
+              <div className="rounded-lg">
                 <img
                   src="/images/resumepilot-logo.png"
                   alt="ResumePilot Logo"
-                  className="w-full h-full object-contain"
+                  className="object-contain"
+                  style={{ width: "40px", height: "40px", borderRadius: "9px" }}
                 />
               </div>
               <span className="text-xl font-bold text-gray-900">ResumePilot</span>
