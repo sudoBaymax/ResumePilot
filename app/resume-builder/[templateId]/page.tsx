@@ -150,14 +150,17 @@ export default function ResumeBuilderPage() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
               <div className="flex items-center space-x-2">
-                <div className="rounded-lg">
-                <img
-                  src="/images/resumepilot-logo.png"
-                  alt="ResumePilot Logo"
-                  className="object-contain"
-                  style={{ width: "40px", height: "40px", borderRadius: "9px" }}
-                />
-              </div>
+                <div className="rounded-lg border-[25px] border-blue-200 p-1 bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center">
+                  <img
+                    src="/images/resumepilot-logo.png"
+                    alt="ResumePilot Logo"
+                    className="object-contain"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none"
+                      e.currentTarget.parentElement!.innerHTML = '<div class="text-white text-xs font-bold">RP</div>'
+                    }}
+                  />
+                </div>
                 <span className="text-xl font-bold text-gray-900">ResumePilot</span>
               </div>
             </div>
