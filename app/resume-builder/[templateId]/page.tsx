@@ -150,8 +150,12 @@ export default function ResumeBuilderPage() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-white" />
+                <div className="w-8 h-8 rounded-lg border-2 border-blue-200 p-1 bg-gradient-to-r from-blue-600 to-purple-600">
+                  <img
+                    src="/images/resumepilot-logo.png"
+                    alt="ResumePilot Logo"
+                    className="w-full h-full object-contain"
+                  />
                 </div>
                 <span className="text-xl font-bold text-gray-900">ResumePilot</span>
               </div>

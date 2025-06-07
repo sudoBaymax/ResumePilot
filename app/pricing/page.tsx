@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
-  FileText,
   ChevronDown,
   LogOut,
   Check,
@@ -266,9 +265,14 @@ export default function PricingPage() {
       <header className="border-b bg-white/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
+            {/* Logo */}
             <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <FileText className="w-5 h-5 text-white" />
+              <div className="w-8 h-8 rounded-lg border-2 border-blue-200 p-1 bg-gradient-to-r from-blue-600 to-purple-600">
+                <img
+                  src="/images/resumepilot-logo.png"
+                  alt="ResumePilot Logo"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <span className="text-xl font-bold text-gray-900">ResumePilot</span>
             </Link>
@@ -630,9 +634,14 @@ export default function PricingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8">
             <div className="space-y-4">
+              {/* Footer Logo */}
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-white" />
+                <div className="w-8 h-8 rounded-lg border-2 border-white/20 p-1 bg-white/10">
+                  <img
+                    src="/images/resumepilot-logo.png"
+                    alt="ResumePilot Logo"
+                    className="w-full h-full object-contain"
+                  />
                 </div>
                 <span className="text-xl font-bold">ResumePilot</span>
               </div>
