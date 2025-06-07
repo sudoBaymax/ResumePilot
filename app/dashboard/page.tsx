@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { FileText, ChevronDown, LogOut, Star, Zap, Settings, PlaneTakeoff } from "lucide-react"
+import { FileText, ChevronDown, LogOut, Star, Zap, Settings } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useState } from "react"
@@ -121,10 +121,18 @@ export default function DashboardPage() {
       <header className="border-b bg-white/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            {/* Replace image with SVG icon */}
             <div className="flex items-center space-x-2">
-              <div className="w-12 h-12 rounded-lg border-[25px] border-blue-200 p-1 bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center">
-                <PlaneTakeoff className="w-6 h-6 text-white" />
+              <div className="rounded-lg border-[25px] border-blue-200 p-1 bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center">
+                <img
+                  src="/images/resumepilot-logo.png"
+                  alt="ResumePilot Logo"
+                  className="object-contain"
+                  onError={(e) => {
+                    // Fallback to a simple icon if image fails to load
+                    e.currentTarget.style.display = "none"
+                    e.currentTarget.parentElement!.innerHTML = '<div class="text-white text-xs font-bold">RP</div>'
+                  }}
+                />
               </div>
               <span className="text-xl font-bold text-gray-900">ResumePilot</span>
             </div>

@@ -267,12 +267,15 @@ export default function PricingPage() {
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <Link href="/" className="flex items-center space-x-2">
-              <div className="rounded-lg">
+              <div className="rounded-lg border-[25px] border-blue-200 p-1 bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center">
                 <img
                   src="/images/resumepilot-logo.png"
                   alt="ResumePilot Logo"
                   className="object-contain"
-                  style={{ width: "40px", height: "40px", borderRadius: "9px" }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none"
+                    e.currentTarget.parentElement!.innerHTML = '<div class="text-white text-xs font-bold">RP</div>'
+                  }}
                 />
               </div>
               <span className="text-xl font-bold text-gray-900">ResumePilot</span>
@@ -637,14 +640,17 @@ export default function PricingPage() {
             <div className="space-y-4">
               {/* Footer Logo */}
               <div className="flex items-center space-x-2">
-                <div className="rounded-lg">
+                <div className="rounded-lg border-[25px] border-white/20 p-1 bg-white/10 flex items-center justify-center">
                   <img
                     src="/images/resumepilot-logo.png"
                     alt="ResumePilot Logo"
                     className="object-contain"
-                    style={{ width: "40px", height: "40px", borderRadius: "9px" }}
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none"
+                      e.currentTarget.parentElement!.innerHTML = '<div class="text-white text-xs font-bold">RP</div>'
+                    }}
                   />
-              </div>
+                </div>
                 <span className="text-xl font-bold">ResumePilot</span>
               </div>
               <p className="text-gray-400 text-sm">
