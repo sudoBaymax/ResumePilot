@@ -34,7 +34,7 @@ export default function LandingPage() {
                 <img
                   src="/images/resumepilot-logo.png"
                   alt="ResumePilot Logo"
-                  className="w-full h-full object-contain"
+                  className="w-20 h-20 object-contain"
                 />
               </div>
               <span className="text-xl font-bold text-gray-900">ResumePilot</span>
