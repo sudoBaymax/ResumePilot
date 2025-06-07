@@ -30,15 +30,12 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
-              <div className="rounded-lg border-[25px] border-white/20 p-1 bg-white/10 flex items-center justify-center">
+              <div className="rounded-lg">
                 <img
                   src="/images/resumepilot-logo.png"
                   alt="ResumePilot Logo"
                   className="object-contain"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none"
-                    e.currentTarget.parentElement!.innerHTML = '<div class="text-white text-xs font-bold">RP</div>'
-                  }}
+                  style={{ width: "40px", height: "40px", borderRadius: "9px" }}
                 />
               </div>
               <span className="text-xl font-bold text-gray-900">ResumePilot</span>
@@ -399,11 +396,7 @@ export default function LandingPage() {
                     src="/images/resumepilot-logo.png"
                     alt="ResumePilot Logo"
                     className="object-contain"
-                    style={width:"40px", height:"40px", borderRadius:"9px"}
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none"
-                      e.currentTarget.parentElement!.innerHTML = '<div class="text-white text-xs font-bold">RP</div>'
-                    }}
+                    style={{ width: "40px", height: "40px", borderRadius: "9px" }}
                   />
                 </div>
                 <span className="text-xl font-bold">ResumePilot</span>
