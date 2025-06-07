@@ -3,7 +3,13 @@ import { createClient } from "@supabase/supabase-js"
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Create a singleton instance
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+})
 
 // Types for our database tables
 export interface WaitlistSubmission {
@@ -38,4 +44,18 @@ export interface Profile {
   resume_format?: string
   voice_settings?: any
   updated_at: string
+}
+
+// Helper function to create authenticated client (for API routes)
+export function createAuthenticatedClient(token: string) {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+    auth: {
+      persistSession: false,
+    },
+  })
 }

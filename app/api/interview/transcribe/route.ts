@@ -1,8 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { supabase } from "@/lib/supabase"
 import { createClient } from "@supabase/supabase-js"
 
-// Create Supabase client
-const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+// Create Supabase admin client
+const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+  auth: {
+    persistSession: false,
+  },
+})
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,12 +19,11 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.replace("Bearer ", "")
 
-    // Verify user with Supabase
-    const supabaseUser = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+    // Verify user with Supabase using the singleton client
     const {
       data: { user },
       error: authError,
-    } = await supabaseUser.auth.getUser(token)
+    } = await supabase.auth.getUser(token)
 
     if (authError || !user) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
@@ -89,7 +93,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No transcription text received" }, { status: 500 })
     }
 
-    // Store transcript in Supabase
+    // Store transcript in Supabase using admin client
     try {
       const { data: transcriptData, error: transcriptError } = await supabaseAdmin
         .from("interview_transcripts")
