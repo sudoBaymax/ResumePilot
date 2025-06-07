@@ -6,9 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { FileText, ChevronDown, LogOut, Mic, Play, Download, Save, AlertCircle } from "lucide-react"
-import { useRouter, useParams } from "next/navigation"
+import { useRouter, useParams, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { SubscriptionGuard } from "@/components/subscription/subscription-guard"
 import { useToast } from "@/hooks/use-toast"
 
@@ -59,9 +59,27 @@ export default function ResumeBuilderPage() {
   const { user, loading, signOut } = useAuth()
   const router = useRouter()
   const params = useParams()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const templateId = params.templateId as string
-  const [startingInterview, setStartingInterview] = useState(false)
+  const [resumeBullets, setResumeBullets] = useState<any[]>([])
+
+  useEffect(() => {
+    // Check if we have bullets from the interview
+    const bulletsParam = searchParams.get("bullets")
+    if (bulletsParam) {
+      try {
+        const parsedBullets = JSON.parse(decodeURIComponent(bulletsParam))
+        setResumeBullets(parsedBullets)
+        toast({
+          title: "Resume Bullets Loaded",
+          description: `${parsedBullets.length} bullet points have been loaded from your interview.`,
+        })
+      } catch (error) {
+        console.error("Error parsing bullets:", error)
+      }
+    }
+  }, [searchParams, toast])
 
   if (loading) {
     return (
@@ -97,49 +115,8 @@ export default function ResumeBuilderPage() {
     router.push("/")
   }
 
-  const handleStartInterview = async () => {
-    setStartingInterview(true)
-
-    try {
-      // Check access and increment usage
-      const response = await fetch("/api/subscription/start-action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user.id,
-          action: "interview",
-        }),
-      })
-
-      const result = await response.json()
-
-      if (!result.success) {
-        toast({
-          title: "Interview Limit Reached",
-          description: result.error || "You've reached your monthly interview limit",
-          variant: "destructive",
-        })
-        return
-      }
-
-      // Start the actual interview
-      toast({
-        title: "Interview Started!",
-        description: "Your voice interview session has begun.",
-      })
-
-      // TODO: Implement actual interview logic here
-      console.log("Starting interview for template:", templateId)
-    } catch (error) {
-      console.error("Error starting interview:", error)
-      toast({
-        title: "Error",
-        description: "Failed to start interview. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setStartingInterview(false)
-    }
+  const handleStartInterview = () => {
+    router.push(`/resume-builder/${templateId}/interview`)
   }
 
   return (
@@ -149,17 +126,15 @@ export default function ResumeBuilderPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
-              <div className="flex items-center space-x-2">
-                <div className="rounded-lg">
-                  <img
-                    src="/images/resumepilot-logo.png"
-                    alt="ResumePilot Logo"
-                    className="object-contain"
-                    style={{ width: "40px", height: "40px", borderRadius: "9px" }}
-                  />
-                </div>
-                <span className="text-xl font-bold text-gray-900">ResumePilot</span>
+              <div className="rounded-lg">
+                <img
+                  src="/images/resumepilot-logo.png"
+                  alt="ResumePilot Logo"
+                  className="object-contain"
+                  style={{ width: "40px", height: "40px", borderRadius: "9px" }}
+                />
               </div>
+              <span className="text-xl font-bold text-gray-900">ResumePilot</span>
             </div>
 
             {/* User Dropdown */}
@@ -239,10 +214,9 @@ export default function ResumeBuilderPage() {
                   <Button
                     className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
                     onClick={handleStartInterview}
-                    disabled={startingInterview}
                   >
                     <Play className="w-4 h-4 mr-2" />
-                    {startingInterview ? "Starting..." : "Start Interview"}
+                    Start Interview
                   </Button>
                   <div className="text-sm text-gray-600">
                     <p>• 10-15 minute conversation</p>
@@ -287,31 +261,59 @@ export default function ResumeBuilderPage() {
             <Card className="h-full">
               <CardHeader>
                 <CardTitle className="text-lg">Resume Preview</CardTitle>
-                <CardDescription>Your resume will appear here as you complete the voice interview</CardDescription>
+                <CardDescription>
+                  {resumeBullets.length > 0
+                    ? `${resumeBullets.length} bullet points generated from your interview`
+                    : "Your resume will appear here as you complete the voice interview"}
+                </CardDescription>
               </CardHeader>
-              <CardContent className="flex items-center justify-center min-h-[600px]">
-                <div className="text-center space-y-4">
-                  <div className="w-24 h-24 bg-gray-100 rounded-lg flex items-center justify-center mx-auto">
-                    <FileText className="w-12 h-12 text-gray-400" />
+              <CardContent className="min-h-[600px]">
+                {resumeBullets.length > 0 ? (
+                  <div className="space-y-6">
+                    <div className="p-6 border rounded-lg">
+                      <h2 className="text-xl font-bold mb-4">Generated Resume Bullets</h2>
+                      <ul className="space-y-4">
+                        {resumeBullets.map((bullet, index) => (
+                          <li key={index} className="pl-4 border-l-2 border-blue-500">
+                            <p className="text-gray-900">{bullet.text}</p>
+                            {bullet.context && <p className="text-sm text-gray-500 mt-1">Context: {bullet.context}</p>}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="text-center">
+                      <p className="text-gray-600 mb-4">
+                        These bullets are ready to be added to your resume. You can edit them or generate more.
+                      </p>
+                      <Button onClick={handleStartInterview} variant="outline">
+                        <Mic className="w-4 h-4 mr-2" />
+                        Generate More Bullets
+                      </Button>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-semibold text-gray-900">Ready to Build Your Resume?</h3>
-                    <p className="text-gray-600 max-w-md">
-                      Start the voice interview to generate personalized content for your {template.name} template with
-                      STAR and XYZ format bullets.
-                    </p>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center space-y-4">
+                      <div className="w-24 h-24 bg-gray-100 rounded-lg flex items-center justify-center mx-auto">
+                        <FileText className="w-12 h-12 text-gray-400" />
+                      </div>
+                      <div className="space-y-2">
+                        <h3 className="text-lg font-semibold text-gray-900">Ready to Build Your Resume?</h3>
+                        <p className="text-gray-600 max-w-md">
+                          Start the voice interview to generate personalized content for your {template.name} template
+                          with STAR and XYZ format bullets.
+                        </p>
+                      </div>
+                      <SubscriptionGuard action="interview">
+                        <Button className="bg-gradient-to-r from-blue-600 to-purple-600" onClick={handleStartInterview}>
+                          <Mic className="w-4 h-4 mr-2" />
+                          Begin Voice Interview
+                        </Button>
+                      </SubscriptionGuard>
+                    </div>
                   </div>
-                  <SubscriptionGuard action="interview">
-                    <Button
-                      className="bg-gradient-to-r from-blue-600 to-purple-600"
-                      onClick={handleStartInterview}
-                      disabled={startingInterview}
-                    >
-                      <Mic className="w-4 h-4 mr-2" />
-                      {startingInterview ? "Starting Interview..." : "Begin Voice Interview"}
-                    </Button>
-                  </SubscriptionGuard>
-                </div>
+                )}
               </CardContent>
             </Card>
           </div>
