@@ -267,7 +267,7 @@ export default function PricingPage() {
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-lg border-2 border-blue-200 p-1 bg-gradient-to-r from-blue-600 to-purple-600">
+              <div className="w-12 h-12 rounded-lg border-[25px] border-blue-200 p-1 bg-gradient-to-r from-blue-600 to-purple-600">
                 <img
                   src="/images/resumepilot-logo.png"
                   alt="ResumePilot Logo"
@@ -636,7 +636,7 @@ export default function PricingPage() {
             <div className="space-y-4">
               {/* Footer Logo */}
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 rounded-lg border-2 border-white/20 p-1 bg-white/10">
+                <div className="w-12 h-12 rounded-lg border-[25px] border-white/20 p-1 bg-white/10">
                   <img
                     src="/images/resumepilot-logo.png"
                     alt="ResumePilot Logo"

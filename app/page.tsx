@@ -30,7 +30,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-lg border-2 border-white/20 p-1 bg-white/10">
+              <div className="w-12 h-12 rounded-lg border-[25px] border-white/20 p-1 bg-white/10">
                 <img
                   src="/images/resumepilot-logo.png"
                   alt="ResumePilot Logo"
@@ -390,7 +390,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-4 gap-8">
             <div className="space-y-4">
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 rounded-lg border-2 border-white/20 p-1 bg-white/10">
+                <div className="w-12 h-12 rounded-lg border-[25px] border-white/20 p-1 bg-white/10">
                   <img
                     src="/images/resumepilot-logo.png"
                     alt="ResumePilot Logo"
