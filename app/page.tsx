@@ -394,7 +394,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-4 gap-8">
             <div className="space-y-4">
               <div className="flex items-center space-x-2">
-                <div className="rounded-lg border-[25px] border-white/20 p-1 bg-white/10 flex items-center justify-center">
+                <div className="rounded-lg">
                   <img
                     src="/images/resumepilot-logo.png"
                     alt="ResumePilot Logo"
