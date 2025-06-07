@@ -122,11 +122,12 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
-              <div className="rounded-lg border-[25px] border-blue-200 p-1 bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center">
+              <div className="rounded-lg">
                 <img
                   src="/images/resumepilot-logo.png"
                   alt="ResumePilot Logo"
                   className="object-contain"
+                  style={{ width: "40px", height: "40px", borderRadius: "9px" }}
                   onError={(e) => {
                     // Fallback to a simple icon if image fails to load
                     e.currentTarget.style.display = "none"
