@@ -34,6 +34,9 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
   const [generatedBullets, setGeneratedBullets] = useState<any[]>([])
   const { toast } = useToast()
 
+  const [conversationId, setConversationId] = useState<string>("")
+  const [turnNumber, setTurnNumber] = useState(1)
+
   const MAX_CONVERSATION_TIME = 15 * 60 // 15 minutes in seconds
   const currentTime = conversationStartTime > 0 ? Math.floor((Date.now() - conversationStartTime) / 1000) : 0
 
@@ -53,6 +56,9 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
 
   const startConversation = async () => {
     setConversationStartTime(Date.now())
+
+    const newConversationId = crypto.randomUUID()
+    setConversationId(newConversationId)
 
     const initialMessage = `Hi! I've reviewed your resume and I'm excited to learn more about your experience. Let's have a conversation about your work - I'll ask questions and we can dive deeper into the projects and achievements that would make great resume bullet points. 
 
@@ -89,6 +95,8 @@ Let's start simple: Can you tell me about your current role and what you've been
       formData.append("audio", audioBlob, `conversation-${Date.now()}.webm`)
       formData.append("question", currentAIMessage)
       formData.append("duration", duration.toString())
+      formData.append("conversationId", conversationId)
+      formData.append("turnNumber", turnNumber.toString())
 
       const transcribeResponse = await fetch("/api/interview/transcribe", {
         method: "POST",
@@ -165,6 +173,7 @@ Let's start simple: Can you tell me about your current role and what you've been
       })
     } finally {
       setIsProcessing(false)
+      setTurnNumber((prev) => prev + 1)
     }
   }
 
@@ -236,6 +245,8 @@ Let's start simple: Can you tell me about your current role and what you've been
           isAITalking={isAITalking}
           conversationTime={currentTime}
           maxTime={MAX_CONVERSATION_TIME}
+          conversationId={conversationId}
+          turnNumber={turnNumber}
         />
 
         {/* Conversation History */}

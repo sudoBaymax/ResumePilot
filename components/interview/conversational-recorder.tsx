@@ -14,6 +14,8 @@ interface ConversationalRecorderProps {
   isAITalking: boolean
   conversationTime: number
   maxTime: number
+  conversationId?: string
+  turnNumber?: number
 }
 
 export function ConversationalRecorder({
@@ -23,6 +25,8 @@ export function ConversationalRecorder({
   isAITalking,
   conversationTime,
   maxTime,
+  conversationId,
+  turnNumber = 1,
 }: ConversationalRecorderProps) {
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
@@ -92,7 +96,16 @@ export function ConversationalRecorder({
         stream.getTracks().forEach((track) => track.stop())
         streamRef.current = null
 
-        await onResponseReady(audioBlob, recordingTime)
+        try {
+          await onResponseReady(audioBlob, recordingTime)
+        } catch (error) {
+          console.error("Error in onResponseReady:", error)
+          toast({
+            title: "Processing Error",
+            description: "There was an error processing your response. Please try again.",
+            variant: "destructive",
+          })
+        }
       }
 
       mediaRecorder.start(1000)
@@ -135,6 +148,24 @@ export function ConversationalRecorder({
 
   const timeRemaining = maxTime - conversationTime
   const isNearTimeLimit = timeRemaining < 120 // 2 minutes remaining
+
+  if (microphonePermission === "denied") {
+    return (
+      <Card className="w-full border-red-200 bg-red-50">
+        <CardHeader>
+          <CardTitle className="text-red-800">Microphone Access Required</CardTitle>
+          <CardDescription className="text-red-700">
+            Please enable microphone permissions to continue with the voice interview.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={checkMicrophonePermission} variant="outline">
+            Check Permissions Again
+          </Button>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card className="w-full">
