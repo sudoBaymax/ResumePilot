@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser(token)
 
     if (authError || !user) {
+      console.error("Auth error:", authError)
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
 
@@ -33,6 +34,8 @@ export async function POST(request: NextRequest) {
     const audioFile = formData.get("audio") as File
     const question = formData.get("question") as string
     const duration = formData.get("duration") as string
+    const conversationId = formData.get("conversationId") as string
+    const turnNumber = formData.get("turnNumber") as string
 
     if (!audioFile) {
       return NextResponse.json({ error: "No audio file provided" }, { status: 400 })
@@ -42,6 +45,9 @@ export async function POST(request: NextRequest) {
       name: audioFile.name,
       size: audioFile.size,
       type: audioFile.type,
+      userId: user.id,
+      conversationId,
+      turnNumber,
     })
 
     // Validate file size (max 25MB for Whisper API)
@@ -94,37 +100,65 @@ export async function POST(request: NextRequest) {
     }
 
     // Store transcript in Supabase using admin client
+    let transcriptData = null
     try {
-      const { data: transcriptData, error: transcriptError } = await supabaseAdmin
+      console.log("Storing transcript for user:", user.id)
+
+      const insertData = {
+        user_id: user.id,
+        transcript: result.text,
+        audio_duration: duration ? Number.parseInt(duration) : null,
+        question: question || null,
+        conversation_id: conversationId || null,
+        turn_number: turnNumber ? Number.parseInt(turnNumber) : 1,
+        response_type: "answer",
+      }
+
+      console.log("Insert data:", insertData)
+
+      const { data, error: transcriptError } = await supabaseAdmin
         .from("interview_transcripts")
-        .insert({
-          user_id: user.id,
-          transcript: result.text,
-          audio_duration: duration || null,
-          question: question || null,
-        })
+        .insert(insertData)
         .select()
         .single()
 
       if (transcriptError) {
-        console.error("Error storing transcript:", transcriptError)
-        // Continue anyway, as we still want to return the transcript to the user
-      }
+        console.error("Detailed transcript error:", {
+          message: transcriptError.message,
+          details: transcriptError.details,
+          hint: transcriptError.hint,
+          code: transcriptError.code,
+        })
 
-      return NextResponse.json({
-        transcript: result.text,
-        transcript_id: transcriptData?.id || null,
-      })
+        // Don't fail the request if transcript storage fails
+        console.warn("Failed to store transcript, but continuing with response")
+      } else {
+        transcriptData = data
+        console.log("Successfully stored transcript:", transcriptData?.id)
+      }
     } catch (dbError) {
-      console.error("Database error:", dbError)
-      // Still return the transcript even if DB storage fails
-      return NextResponse.json({
-        transcript: result.text,
-        transcript_id: null,
+      console.error("Database error details:", {
+        error: dbError,
+        message: dbError instanceof Error ? dbError.message : "Unknown error",
+        stack: dbError instanceof Error ? dbError.stack : undefined,
       })
+
+      // Continue anyway, as we still want to return the transcript to the user
+      console.warn("Database error occurred, but continuing with response")
     }
+
+    return NextResponse.json({
+      transcript: result.text,
+      transcript_id: transcriptData?.id || null,
+      success: true,
+    })
   } catch (error) {
-    console.error("Error in transcription:", error)
+    console.error("Error in transcription:", {
+      error,
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+    })
+
     return NextResponse.json(
       {
         error: "Internal server error",
