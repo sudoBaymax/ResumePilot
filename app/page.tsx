@@ -23,6 +23,14 @@ export default function LandingPage() {
     }
   }, [user, loading, router])
 
+  useEffect(() => {
+    // Check URL parameters for signin or signup
+    const searchParams = new URLSearchParams(window.location.search)
+    if (searchParams.has("signin") || searchParams.has("signup")) {
+      setShowAuthModal(true)
+    }
+  }, [])
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       {/* Navigation */}
@@ -53,7 +61,7 @@ export default function LandingPage() {
               <Link href="#faq" className="text-gray-600 hover:text-gray-900 transition-colors">
                 FAQ
               </Link>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => setShowAuthModal(true)}>
                 Sign In
               </Button>
             </div>
