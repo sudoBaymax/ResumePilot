@@ -93,7 +93,7 @@ export function InterviewSession({ userId, roleType, onComplete }: InterviewSess
         [currentQuestion.id]: transcript,
       }))
 
-      console.log("Generating bullets from transcript...")
+      console.log("Generating bullets using GPT-4o-mini...")
 
       // Generate bullets from transcript
       const generateResponse = await fetch("/api/interview/generate-bullets", {
@@ -111,12 +111,12 @@ export function InterviewSession({ userId, roleType, onComplete }: InterviewSess
 
       if (!generateResponse.ok) {
         const errorData = await generateResponse.json()
-        console.error("Bullet generation error:", errorData)
-        throw new Error(errorData.details || errorData.error || "Failed to generate bullets")
+        console.error("GPT-4o-mini bullet generation error:", errorData)
+        throw new Error(errorData.details || errorData.error || "Failed to generate bullets with GPT-4o-mini")
       }
 
       const { bullets: generatedBullets } = await generateResponse.json()
-      console.log("Bullets generated:", generatedBullets)
+      console.log("GPT-4o-mini generated bullets:", generatedBullets)
 
       // Store bullets
       setBullets((prev) => ({
@@ -125,8 +125,8 @@ export function InterviewSession({ userId, roleType, onComplete }: InterviewSess
       }))
 
       toast({
-        title: "Answer Processed",
-        description: `Generated ${generatedBullets?.length || 0} resume bullet points from your answer.`,
+        title: "Answer Processed with GPT-4o-mini",
+        description: `Generated ${generatedBullets?.length || 0} high-quality resume bullet points from your answer.`,
         variant: "default",
       })
 

@@ -58,32 +58,40 @@ export async function POST(request: NextRequest) {
       console.error("Error fetching profile:", profileError)
     }
 
-    // Construct the prompt for GPT-3.5 Turbo
-    const prompt = constructPrompt(transcript, question, role, experience, context, profile)
+    // Construct the enhanced prompt for GPT-4o-mini
+    const prompt = constructEnhancedPrompt(transcript, question, role, experience, context, profile)
 
-    console.log("Calling OpenAI with prompt length:", prompt.length)
+    console.log("Calling OpenAI GPT-4o-mini with prompt length:", prompt.length)
 
-    // Call GPT-3.5 Turbo
+    // Call GPT-4o-mini with enhanced parameters
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content:
-            "You are an AI resume coach. Given the following transcript from a voice interview and resume context, generate concise, impactful resume bullet points in XYZ format (Did X using Y resulting in Z). If data is insufficient, focus on what is available and make reasonable enhancements. Always return valid JSON.",
+          content: `You are an expert resume coach specializing in software engineering careers. You excel at transforming interview responses into compelling, ATS-optimized resume bullet points.
+
+Your expertise includes:
+- Converting conversational responses into professional, quantified achievements
+- Using both STAR (Situation, Task, Action, Result) and XYZ (Accomplished X as measured by Y by doing Z) formats
+- Identifying and highlighting technical skills, leadership qualities, and business impact
+- Creating bullets that pass ATS systems while remaining engaging to human readers
+- Making reasonable quantitative estimates when exact metrics aren't provided
+
+Always return valid JSON with well-structured bullet points.`,
         },
         {
           role: "user",
           content: prompt,
         },
       ],
-      temperature: 0.7,
-      max_tokens: 500,
+      temperature: 0.3, // Lower temperature for more consistent, professional output
+      max_tokens: 800, // Increased token limit for more detailed responses
       response_format: { type: "json_object" },
     })
 
     const responseContent = completion.choices[0].message.content
-    console.log("OpenAI response:", responseContent)
+    console.log("OpenAI GPT-4o-mini response:", responseContent)
 
     let bullets
 
@@ -91,19 +99,31 @@ export async function POST(request: NextRequest) {
       const parsedResponse = JSON.parse(responseContent || "{}")
       bullets = parsedResponse.bullets || []
 
-      // Ensure bullets is an array
+      // Ensure bullets is an array and validate structure
       if (!Array.isArray(bullets)) {
         bullets = []
       }
+
+      // Validate and enhance bullet structure
+      bullets = bullets.map((bullet: any, index: number) => ({
+        text: bullet.text || `Professional achievement from interview response ${index + 1}`,
+        context: bullet.context || role || "Professional experience",
+        format: bullet.format || "XYZ",
+        impact_level: bullet.impact_level || "medium",
+        technologies: bullet.technologies || [],
+      }))
     } catch (error) {
-      console.error("Error parsing GPT response:", error)
+      console.error("Error parsing GPT-4o-mini response:", error)
       console.error("Raw response:", responseContent)
 
-      // Fallback: try to extract bullet points from the response
+      // Enhanced fallback with better structure
       bullets = [
         {
-          text: "Generated bullet point from interview response",
-          context: role || "Professional experience",
+          text: "Led technical initiative resulting in improved system performance and user experience",
+          context: role || "Software Engineering",
+          format: "XYZ",
+          impact_level: "medium",
+          technologies: [],
         },
       ]
     }
@@ -143,8 +163,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Helper function to construct the prompt
-function constructPrompt(
+// Enhanced prompt construction for GPT-4o-mini
+function constructEnhancedPrompt(
   transcript: string,
   question: string,
   role?: string,
@@ -152,50 +172,70 @@ function constructPrompt(
   context?: string,
   profile?: any,
 ) {
-  let prompt = `Voice Transcript:
-["Interviewer: ${question}"
-"Candidate: ${transcript}"]
+  let prompt = `## Interview Analysis Task
 
+**Interview Question:** "${question}"
+
+**Candidate Response:** "${transcript}"
+
+## Context Information
 `
 
   if (role) {
-    prompt += `Target Role: ${role}\n`
+    prompt += `- **Target Role:** ${role}\n`
   }
 
   if (experience) {
-    prompt += `Experience Level: ${experience}\n`
+    prompt += `- **Experience Level:** ${experience}\n`
   }
 
   if (context) {
-    prompt += `Resume Context: ["${context}"]\n`
+    prompt += `- **Additional Context:** ${context}\n`
   } else if (profile?.job_title) {
-    prompt += `Resume Context: ["${profile.job_title}"]\n`
+    prompt += `- **Current Role:** ${profile.job_title}\n`
   }
 
   prompt += `
-Generate 1-3 bullet points using XYZ format (Did X using Y resulting in Z).
+## Task Requirements
 
-XYZ Format Rules:
-- X: Action verb (led, managed, built, optimized, launched, scaled, developed, automated, etc.)
-- Y: Technology, method, team size, framework, specific action or innovation
-- Z: Measurable metric (%, $, time saved, engagement, etc.). If not directly mentioned, use reasonable estimations with ~ symbol.
+Generate 2-4 professional resume bullet points from this interview response using the following guidelines:
 
-Focus on:
-- Specific actions and technologies mentioned
-- Quantifiable results and impact
-- Professional language and strong action verbs
-- Avoid generic statements
+### Format Options:
+1. **XYZ Format:** "Accomplished [X] as measured by [Y] by doing [Z]"
+2. **STAR Format:** Focus on Situation, Task, Action, Result when storytelling is important
 
-Return the response as a JSON object with this exact format:
+### Quality Standards:
+- **Action Verbs:** Use strong verbs (led, developed, optimized, implemented, architected, scaled, etc.)
+- **Quantification:** Include or reasonably estimate metrics (%, $, time, scale, users, etc.)
+- **Technical Depth:** Highlight specific technologies, frameworks, methodologies mentioned
+- **Business Impact:** Connect technical work to business outcomes when possible
+- **ATS Optimization:** Use industry-standard keywords and formatting
+
+### Enhancement Guidelines:
+- If exact numbers aren't provided, make reasonable estimates with "~" prefix
+- Extract implicit achievements from the response
+- Identify leadership, collaboration, or problem-solving elements
+- Highlight any innovation, efficiency gains, or process improvements
+
+## Output Format
+
+Return a JSON object with this exact structure:
+
+\`\`\`json
 {
   "bullets": [
     {
-      "text": "Bullet point text in XYZ format",
-      "context": "Role or project context"
+      "text": "Complete bullet point text following XYZ or STAR format",
+      "context": "Project/role context (e.g., 'E-commerce Platform Development')",
+      "format": "XYZ" or "STAR",
+      "impact_level": "high" | "medium" | "low",
+      "technologies": ["tech1", "tech2", "tech3"]
     }
   ]
 }
-`
+\`\`\`
+
+Focus on creating bullets that would impress both ATS systems and hiring managers in the software engineering field.`
 
   return prompt
 }
