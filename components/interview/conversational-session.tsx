@@ -7,7 +7,8 @@ import { ResumeUpload } from "@/components/interview/resume-upload"
 import { ConversationalRecorder } from "@/components/interview/conversational-recorder"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
-import { FileText, CheckCircle, MessageCircle, ArrowRight } from "lucide-react"
+import { FileText, CheckCircle, MessageCircle, ArrowRight, AlertTriangle } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface ConversationalSessionProps {
   userId: string
@@ -32,6 +33,7 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
   const [isAITalking, setIsAITalking] = useState(false)
   const [conversationStartTime, setConversationStartTime] = useState<number>(0)
   const [generatedBullets, setGeneratedBullets] = useState<any[]>([])
+  const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
 
   const [conversationId, setConversationId] = useState<string>("")
@@ -56,6 +58,7 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
 
   const startConversation = async () => {
     setConversationStartTime(Date.now())
+    setError(null)
 
     const newConversationId = crypto.randomUUID()
     setConversationId(newConversationId)
@@ -80,8 +83,11 @@ Let's start simple: Can you tell me about your current role and what you've been
 
   const handleUserResponse = async (audioBlob: Blob, duration: number) => {
     setIsProcessing(true)
+    setError(null)
 
     try {
+      console.log("Processing user response...")
+
       const {
         data: { session },
       } = await supabase.auth.getSession()
@@ -91,6 +97,7 @@ Let's start simple: Can you tell me about your current role and what you've been
       }
 
       // Transcribe user response
+      console.log("Transcribing audio...")
       const formData = new FormData()
       formData.append("audio", audioBlob, `conversation-${Date.now()}.webm`)
       formData.append("question", currentAIMessage)
@@ -107,10 +114,17 @@ Let's start simple: Can you tell me about your current role and what you've been
       })
 
       if (!transcribeResponse.ok) {
-        throw new Error("Transcription failed")
+        const errorText = await transcribeResponse.text()
+        console.error("Transcription failed:", errorText)
+        throw new Error(`Transcription failed: ${transcribeResponse.status}`)
       }
 
       const { transcript } = await transcribeResponse.json()
+      console.log("Transcription successful:", transcript?.substring(0, 100))
+
+      if (!transcript || transcript.trim().length === 0) {
+        throw new Error("No transcript received - please try speaking again")
+      }
 
       // Add user response to conversation
       const userTurn: ConversationTurn = {
@@ -123,6 +137,7 @@ Let's start simple: Can you tell me about your current role and what you've been
       setConversation((prev) => [...prev, userTurn])
 
       // Generate AI follow-up
+      console.log("Generating AI follow-up...")
       const followUpResponse = await fetch("/api/interview/generate-followup", {
         method: "POST",
         headers: {
@@ -139,24 +154,52 @@ Let's start simple: Can you tell me about your current role and what you've been
       })
 
       if (!followUpResponse.ok) {
-        throw new Error("Failed to generate follow-up")
+        const errorText = await followUpResponse.text()
+        console.error("Follow-up generation failed:", errorText)
+
+        // Use fallback response instead of throwing error
+        const fallbackMessage =
+          currentTime >= MAX_CONVERSATION_TIME - 180
+            ? "Thank you for sharing your experience! Let me generate your resume bullets now."
+            : "Can you tell me more about the specific technologies you used and the impact of your work?"
+
+        const aiTurn: ConversationTurn = {
+          speaker: "ai",
+          message: fallbackMessage,
+          timestamp: Date.now(),
+        }
+
+        setConversation((prev) => [...prev, aiTurn])
+        setCurrentAIMessage(fallbackMessage)
+
+        // Check if we should end
+        if (currentTime >= MAX_CONVERSATION_TIME - 180) {
+          setTimeout(() => {
+            endConversation([])
+          }, 2000)
+        }
+
+        return
       }
 
-      const { message: aiMessage, shouldEnd, bullets } = await followUpResponse.json()
+      const followUpData = await followUpResponse.json()
+      console.log("Follow-up response:", followUpData)
+
+      const { message: aiMessage, shouldEnd, bullets } = followUpData
 
       // Add AI response to conversation
       const aiTurn: ConversationTurn = {
         speaker: "ai",
-        message: aiMessage,
+        message: aiMessage || "Can you tell me more about that?",
         timestamp: Date.now(),
       }
 
       setConversation((prev) => [...prev, aiTurn])
-      setCurrentAIMessage(aiMessage)
+      setCurrentAIMessage(aiMessage || "Can you tell me more about that?")
 
       // Simulate AI speaking
       setIsAITalking(true)
-      setTimeout(() => setIsAITalking(false), Math.min(aiMessage.length * 50, 4000))
+      setTimeout(() => setIsAITalking(false), Math.min((aiMessage?.length || 50) * 50, 4000))
 
       // Check if conversation should end
       if (shouldEnd || currentTime >= MAX_CONVERSATION_TIME - 60) {
@@ -166,6 +209,8 @@ Let's start simple: Can you tell me about your current role and what you've been
       }
     } catch (error) {
       console.error("Error processing response:", error)
+      setError(error instanceof Error ? error.message : "Unknown error occurred")
+
       toast({
         title: "Processing Error",
         description: "There was an error processing your response. Please try again.",
@@ -178,6 +223,7 @@ Let's start simple: Can you tell me about your current role and what you've been
   }
 
   const endConversation = async (bullets: any[]) => {
+    console.log("Ending conversation with", bullets.length, "bullets")
     setStep("complete")
     setGeneratedBullets(bullets)
 
@@ -238,6 +284,13 @@ Let's start simple: Can you tell me about your current role and what you've been
   if (step === "interview") {
     return (
       <div className="space-y-6">
+        {error && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
         <ConversationalRecorder
           onResponseReady={handleUserResponse}
           isProcessing={isProcessing}
