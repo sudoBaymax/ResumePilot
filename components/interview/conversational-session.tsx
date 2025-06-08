@@ -119,8 +119,14 @@ Let's start simple: Can you tell me about your current role and what you've been
         throw new Error(`Transcription failed: ${transcribeResponse.status}`)
       }
 
-      const { transcript } = await transcribeResponse.json()
-      console.log("Transcription successful:", transcript?.substring(0, 100))
+      const transcribeData = await transcribeResponse.json()
+      console.log("Transcription response:", transcribeData)
+
+      const { transcript, warning } = transcribeData
+
+      if (warning) {
+        console.warn("Transcript storage warning:", warning)
+      }
 
       if (!transcript || transcript.trim().length === 0) {
         throw new Error("No transcript received - please try speaking again")

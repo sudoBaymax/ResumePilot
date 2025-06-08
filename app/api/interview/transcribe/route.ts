@@ -99,22 +99,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No transcription text received" }, { status: 500 })
     }
 
-    // Store transcript in Supabase using admin client
+    // Store transcript in Supabase using admin client (optional - don't fail if this fails)
     let transcriptData = null
     try {
-      console.log("Storing transcript for user:", user.id)
+      console.log("Attempting to store transcript for user:", user.id)
+
+      // First, check if the table exists by trying a simple query
+      const { error: tableCheckError } = await supabaseAdmin.from("interview_transcripts").select("id").limit(1)
+
+      if (tableCheckError) {
+        console.warn("interview_transcripts table may not exist:", tableCheckError.message)
+        // Continue without storing transcript
+        return NextResponse.json({
+          transcript: result.text,
+          transcript_id: null,
+          success: true,
+          warning: "Transcript not stored - table may not exist",
+        })
+      }
 
       const insertData = {
         user_id: user.id,
-        transcript: result.text,
-        audio_duration: duration ? Number.parseInt(duration) : null,
-        question: question || null,
-        conversation_id: conversationId || null,
-        turn_number: turnNumber ? Number.parseInt(turnNumber) : 1,
+        transcript: result.text.trim(),
+        audio_duration: duration ? Number.parseInt(duration, 10) : null,
+        question: question?.trim() || null,
+        conversation_id: conversationId?.trim() || null,
+        turn_number: turnNumber ? Number.parseInt(turnNumber, 10) : 1,
         response_type: "answer",
       }
 
-      console.log("Insert data:", insertData)
+      console.log("Inserting transcript data:", {
+        ...insertData,
+        transcript: insertData.transcript.substring(0, 100) + "...",
+      })
 
       const { data, error: transcriptError } = await supabaseAdmin
         .from("interview_transcripts")
@@ -128,6 +145,10 @@ export async function POST(request: NextRequest) {
           details: transcriptError.details,
           hint: transcriptError.hint,
           code: transcriptError.code,
+          insertData: {
+            ...insertData,
+            transcript: insertData.transcript.substring(0, 50) + "...",
+          },
         })
 
         // Don't fail the request if transcript storage fails
@@ -141,6 +162,7 @@ export async function POST(request: NextRequest) {
         error: dbError,
         message: dbError instanceof Error ? dbError.message : "Unknown error",
         stack: dbError instanceof Error ? dbError.stack : undefined,
+        userId: user.id,
       })
 
       // Continue anyway, as we still want to return the transcript to the user
