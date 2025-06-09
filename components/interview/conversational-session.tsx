@@ -23,6 +23,13 @@ interface ConversationTurn {
   audioBlob?: Blob
 }
 
+const FALLBACK_QUESTIONS = [
+  "Can you tell me about a specific project you worked on recently?",
+  "What technologies have you been using in your current role?",
+  "Can you describe a challenge you solved and the impact it had?",
+  "What's the most significant improvement you've made in your work?",
+]
+
 export function ConversationalSession({ userId, roleType, onComplete }: ConversationalSessionProps) {
   const [step, setStep] = useState<"upload" | "interview" | "complete">("upload")
   const [resumeText, setResumeText] = useState("")
@@ -140,56 +147,71 @@ Let's start simple: Can you tell me about your current role and what you've been
         audioBlob,
       }
 
-      setConversation((prev) => [...prev, userTurn])
+      const updatedConversation = [...conversation, userTurn]
+      setConversation(updatedConversation)
 
-      // Generate AI follow-up
-      console.log("Generating AI follow-up...")
-      const followUpResponse = await fetch("/api/interview/generate-followup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          conversation: [...conversation, userTurn],
-          resumeText,
-          roleType,
-          conversationTime: currentTime,
-          maxTime: MAX_CONVERSATION_TIME,
-        }),
-      })
+      // Check if we should end the conversation based on time or turns
+      const userResponses = updatedConversation.filter((turn) => turn.speaker === "user")
+      const shouldEndNow = currentTime >= MAX_CONVERSATION_TIME - 180 || userResponses.length >= 8
 
-      if (!followUpResponse.ok) {
-        const errorText = await followUpResponse.text()
-        console.error("Follow-up generation failed:", errorText)
+      if (shouldEndNow) {
+        console.log("Ending conversation due to time/turn limit")
+        const endMessage =
+          "Thank you for the great conversation! I have everything I need to create your resume bullet points."
 
-        // Use fallback response instead of throwing error
-        const fallbackMessage =
-          currentTime >= MAX_CONVERSATION_TIME - 180
-            ? "Thank you for sharing your experience! Let me generate your resume bullets now."
-            : "Can you tell me more about the specific technologies you used and the impact of your work?"
-
-        const aiTurn: ConversationTurn = {
+        const finalAiTurn: ConversationTurn = {
           speaker: "ai",
-          message: fallbackMessage,
+          message: endMessage,
           timestamp: Date.now(),
         }
 
-        setConversation((prev) => [...prev, aiTurn])
-        setCurrentAIMessage(fallbackMessage)
+        setConversation((prev) => [...prev, finalAiTurn])
+        setCurrentAIMessage(endMessage)
 
-        // Check if we should end
-        if (currentTime >= MAX_CONVERSATION_TIME - 180) {
-          setTimeout(() => {
-            endConversation([])
-          }, 2000)
-        }
-
+        // Generate bullets and end
+        setTimeout(() => {
+          endConversation([])
+        }, 2000)
         return
       }
 
-      const followUpData = await followUpResponse.json()
-      console.log("Follow-up response:", followUpData)
+      // Generate AI follow-up
+      console.log("Generating AI follow-up...")
+
+      let followUpData
+      try {
+        const followUpResponse = await fetch("/api/interview/generate-followup", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            conversation: updatedConversation,
+            resumeText,
+            roleType,
+            conversationTime: currentTime,
+            maxTime: MAX_CONVERSATION_TIME,
+          }),
+        })
+
+        if (!followUpResponse.ok) {
+          throw new Error(`Follow-up API failed: ${followUpResponse.status}`)
+        }
+
+        followUpData = await followUpResponse.json()
+        console.log("Follow-up response:", followUpData)
+      } catch (followUpError) {
+        console.error("Follow-up generation failed:", followUpError)
+
+        // Use local fallback
+        const fallbackMessage = FALLBACK_QUESTIONS[Math.floor(Math.random() * FALLBACK_QUESTIONS.length)]
+        followUpData = {
+          message: fallbackMessage,
+          shouldEnd: false,
+          bullets: [],
+        }
+      }
 
       const { message: aiMessage, shouldEnd, bullets } = followUpData
 
@@ -208,7 +230,7 @@ Let's start simple: Can you tell me about your current role and what you've been
       setTimeout(() => setIsAITalking(false), Math.min((aiMessage?.length || 50) * 50, 4000))
 
       // Check if conversation should end
-      if (shouldEnd || currentTime >= MAX_CONVERSATION_TIME - 60) {
+      if (shouldEnd) {
         setTimeout(() => {
           endConversation(bullets || [])
         }, 2000)
@@ -230,6 +252,43 @@ Let's start simple: Can you tell me about your current role and what you've been
 
   const endConversation = async (bullets: any[]) => {
     console.log("Ending conversation with", bullets.length, "bullets")
+
+    // If no bullets provided, try to generate them from the conversation
+    if (bullets.length === 0 && conversation.length > 2) {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+
+        if (session?.access_token) {
+          const conversationHistory = conversation
+            .map((turn) => `${turn.speaker.toUpperCase()}: ${turn.message}`)
+            .join("\n\n")
+
+          const bulletsResponse = await fetch("/api/interview/generate-bullets", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              transcript: conversationHistory,
+              question: "Full conversation summary",
+              role: roleType || "Software Engineer",
+              context: "Conversational interview",
+            }),
+          })
+
+          if (bulletsResponse.ok) {
+            const { bullets: generatedBullets } = await bulletsResponse.json()
+            bullets = generatedBullets || []
+          }
+        }
+      } catch (error) {
+        console.error("Error generating final bullets:", error)
+      }
+    }
+
     setStep("complete")
     setGeneratedBullets(bullets)
 

@@ -1,15 +1,29 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
-import { OpenAI } from "openai"
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+// Simple fallback questions for different conversation stages
+const FALLBACK_QUESTIONS = [
+  "Can you tell me more about the specific technologies you used in that project?",
+  "What was the impact or result of that work? Any metrics you can share?",
+  "How big was the team you worked with on this?",
+  "What challenges did you face and how did you overcome them?",
+  "Can you walk me through your role in that project?",
+  "What specific improvements or optimizations did you make?",
+  "How did you measure the success of that implementation?",
+  "What was the business impact of your work?",
+]
+
+const WRAP_UP_MESSAGES = [
+  "Thank you for sharing your experience! I have great material to work with for your resume bullets.",
+  "That's excellent information! Let me generate some professional bullet points from our conversation.",
+  "Perfect! I've gathered enough details to create compelling resume bullets for you.",
+]
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("Generate follow-up API called")
+    console.log("=== Generate Follow-up API Called ===")
 
+    // Validate authentication
     const authHeader = request.headers.get("authorization")
     if (!authHeader) {
       console.error("No authorization header")
@@ -27,8 +41,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
 
-    const body = await request.json()
-    console.log("Request body received:", {
+    // Parse request body
+    let body
+    try {
+      body = await request.json()
+    } catch (parseError) {
+      console.error("Error parsing request body:", parseError)
+      return NextResponse.json(
+        {
+          message: "Can you tell me more about your recent work experience?",
+          shouldEnd: false,
+          bullets: [],
+        },
+        { status: 200 },
+      )
+    }
+
+    console.log("Request body parsed:", {
       conversationLength: body.conversation?.length,
       hasResumeText: !!body.resumeText,
       roleType: body.roleType,
@@ -37,88 +66,107 @@ export async function POST(request: NextRequest) {
 
     const { conversation, resumeText, roleType, conversationTime, maxTime } = body
 
+    // Validate conversation data
     if (!conversation || !Array.isArray(conversation)) {
       console.error("Invalid conversation data:", conversation)
-      return NextResponse.json({ error: "Invalid conversation data" }, { status: 400 })
+      return NextResponse.json(
+        {
+          message: "Let's start fresh - can you tell me about your current role?",
+          shouldEnd: false,
+          bullets: [],
+        },
+        { status: 200 },
+      )
     }
 
     const timeRemaining = maxTime - conversationTime
     const shouldWrapUp = timeRemaining < 180 // Less than 3 minutes
+    const userResponses = conversation.filter((turn) => turn.speaker === "user")
 
-    console.log("Conversation context:", {
-      turns: conversation.length,
+    console.log("Conversation analysis:", {
+      totalTurns: conversation.length,
+      userResponses: userResponses.length,
       timeRemaining,
       shouldWrapUp,
     })
 
-    // Build conversation context
-    const conversationHistory = conversation
-      .map((turn) => `${turn.speaker.toUpperCase()}: ${turn.message}`)
-      .join("\n\n")
+    // If we have enough conversation or should wrap up, end the conversation
+    if (shouldWrapUp || userResponses.length >= 8) {
+      console.log("Ending conversation - generating final bullets")
 
-    // Check if OpenAI API key is available
-    if (!process.env.OPENAI_API_KEY) {
-      console.error("OpenAI API key not configured")
-      // Return a fallback response
+      let bullets = []
+      try {
+        // Try to generate bullets from the conversation
+        const conversationHistory = conversation
+          .map((turn) => `${turn.speaker.toUpperCase()}: ${turn.message}`)
+          .join("\n\n")
+
+        const bulletsResponse = await fetch(`${request.nextUrl.origin}/api/interview/generate-bullets`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            transcript: conversationHistory,
+            question: "Full conversation summary",
+            role: roleType || "Software Engineer",
+            context: "Conversational interview",
+          }),
+        })
+
+        if (bulletsResponse.ok) {
+          const bulletData = await bulletsResponse.json()
+          bullets = bulletData.bullets || []
+          console.log("Generated bullets:", bullets.length)
+        } else {
+          console.error("Bullet generation failed:", bulletsResponse.status)
+        }
+      } catch (bulletError) {
+        console.error("Error generating bullets:", bulletError)
+      }
+
+      const wrapUpMessage = WRAP_UP_MESSAGES[Math.floor(Math.random() * WRAP_UP_MESSAGES.length)]
+
       return NextResponse.json({
-        message: shouldWrapUp
-          ? "Thank you for sharing! Let me generate your resume bullets now."
-          : "Can you tell me more about the specific results or impact of that work?",
-        shouldEnd: shouldWrapUp,
-        bullets: [],
+        message: wrapUpMessage,
+        shouldEnd: true,
+        bullets: bullets,
       })
     }
 
-    const prompt = `You are an expert resume coach conducting a conversational interview. Your goal is to extract specific, quantifiable achievements that can be turned into compelling resume bullet points.
+    // Try to use OpenAI for follow-up generation
+    let aiMessage = null
+    try {
+      // Check if OpenAI is available
+      if (!process.env.OPENAI_API_KEY) {
+        console.warn("OpenAI API key not configured, using fallback")
+        throw new Error("OpenAI not configured")
+      }
 
-## Context
-- Role Type: ${roleType || "Software Engineer"}
-- Time Remaining: ${Math.floor(timeRemaining / 60)} minutes
-- Should Wrap Up: ${shouldWrapUp ? "Yes" : "No"}
+      const { OpenAI } = await import("openai")
+      const openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      })
 
-## Resume Context
-${resumeText ? `Resume Summary: ${resumeText.substring(0, 1000)}...` : "No resume provided"}
+      const conversationHistory = conversation
+        .map((turn) => `${turn.speaker.toUpperCase()}: ${turn.message}`)
+        .join("\n\n")
 
-## Conversation So Far
+      const prompt = `You are an expert resume coach conducting a conversational interview. Based on the conversation below, ask ONE specific follow-up question to get quantifiable details for resume bullets.
+
+Conversation:
 ${conversationHistory}
 
-## Instructions
-Based on the conversation, generate your next response as the interviewer. You should:
+Ask about:
+- Specific metrics, numbers, percentages
+- Technologies used
+- Team size
+- Time saved/improved
+- Business impact
 
-1. **Ask follow-up questions** that dig deeper into:
-   - Specific technologies used
-   - Quantifiable results (metrics, percentages, time saved, etc.)
-   - Team size and collaboration
-   - Challenges overcome
-   - Business impact
+Respond with ONLY the question (under 30 words). Be conversational and specific.`
 
-2. **Keep responses conversational** and under 50 words
-3. **Focus on one specific aspect** at a time
-4. **Probe for missing details** that would make strong bullet points
-
-${
-  shouldWrapUp
-    ? `
-5. **IMPORTANT**: Since time is running low, start wrapping up the conversation and prepare to generate final bullet points.
-`
-    : ""
-}
-
-## Response Format
-Return a JSON object with:
-- "message": Your next question/response (conversational, under 50 words)
-- "shouldEnd": boolean (true if conversation should end)
-- "bullets": array of bullet objects (only if shouldEnd is true)
-
-## Example Follow-ups
-- "That sounds impactful! What specific metrics improved after you implemented that feature?"
-- "Interesting! How big was the team you worked with on this project?"
-- "What technologies did you use to build that system?"
-- "How much time did that automation save per week?"
-
-Generate your response now:`
-
-    try {
       console.log("Making OpenAI API call...")
 
       const completion = await openai.chat.completions.create({
@@ -126,8 +174,7 @@ Generate your response now:`
         messages: [
           {
             role: "system",
-            content:
-              "You are an expert resume coach conducting conversational interviews. Keep responses short, focused, and designed to extract quantifiable achievements. Always respond with valid JSON.",
+            content: "You are a resume coach. Ask specific, short follow-up questions to get quantifiable details.",
           },
           {
             role: "user",
@@ -135,135 +182,57 @@ Generate your response now:`
           },
         ],
         temperature: 0.7,
-        max_tokens: 500,
-        response_format: { type: "json_object" },
+        max_tokens: 100,
       })
 
-      const responseContent = completion.choices[0].message.content
-      console.log("GPT-4o-mini follow-up response:", responseContent)
-
-      let response
-      try {
-        response = JSON.parse(responseContent || "{}")
-      } catch (parseError) {
-        console.error("Error parsing GPT response:", parseError)
-        console.error("Raw response:", responseContent)
-
-        // Fallback response
-        response = {
-          message: shouldWrapUp
-            ? "Thank you for the great conversation! I have everything I need to create your resume bullet points."
-            : "Can you tell me more about the specific results or impact of that work?",
-          shouldEnd: shouldWrapUp,
-          bullets: [],
-        }
-      }
-
-      // Ensure response has required fields
-      if (!response.message) {
-        response.message = shouldWrapUp ? "Thank you for sharing your experience!" : "Can you elaborate on that?"
-      }
-
-      if (typeof response.shouldEnd !== "boolean") {
-        response.shouldEnd = shouldWrapUp
-      }
-
-      // If we should end, generate final bullets
-      if (response.shouldEnd || shouldWrapUp) {
-        console.log("Conversation ending, generating final bullets...")
-
-        try {
-          const bulletsResponse = await fetch(`${request.nextUrl.origin}/api/interview/generate-bullets`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              transcript: conversationHistory,
-              question: "Full conversation summary",
-              role: roleType,
-              context: "Conversational interview",
-            }),
-          })
-
-          if (bulletsResponse.ok) {
-            const { bullets } = await bulletsResponse.json()
-            response.bullets = bullets || []
-            console.log("Generated bullets:", response.bullets.length)
-          } else {
-            console.error("Failed to generate bullets:", bulletsResponse.status)
-            response.bullets = []
-          }
-        } catch (bulletError) {
-          console.error("Error generating final bullets:", bulletError)
-          response.bullets = []
-        }
-
-        response.shouldEnd = true
-        response.message =
-          response.message ||
-          "Thank you for the great conversation! I have everything I need to create your resume bullet points."
-      }
-
-      console.log("Final response:", {
-        messageLength: response.message?.length,
-        shouldEnd: response.shouldEnd,
-        bulletsCount: response.bullets?.length || 0,
-      })
-
-      return NextResponse.json(response)
+      aiMessage = completion.choices[0].message.content?.trim()
+      console.log("OpenAI response:", aiMessage)
     } catch (openaiError) {
-      console.error("OpenAI API error:", openaiError)
-
-      // Return fallback response when OpenAI fails
-      const fallbackResponse = {
-        message: shouldWrapUp
-          ? "Thank you for sharing your experience! Let me generate your resume bullets now."
-          : "Can you tell me more about the specific technologies you used and the impact of your work?",
-        shouldEnd: shouldWrapUp,
-        bullets: [],
-      }
-
-      if (shouldWrapUp) {
-        // Try to generate bullets even if OpenAI follow-up failed
-        try {
-          const bulletsResponse = await fetch(`${request.nextUrl.origin}/api/interview/generate-bullets`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              transcript: conversationHistory,
-              question: "Full conversation summary",
-              role: roleType,
-              context: "Conversational interview",
-            }),
-          })
-
-          if (bulletsResponse.ok) {
-            const { bullets } = await bulletsResponse.json()
-            fallbackResponse.bullets = bullets || []
-          }
-        } catch (bulletError) {
-          console.error("Error generating fallback bullets:", bulletError)
-        }
-      }
-
-      return NextResponse.json(fallbackResponse)
+      console.error("OpenAI error:", openaiError)
+      aiMessage = null
     }
+
+    // Use AI message or fallback
+    let finalMessage = aiMessage
+    if (!finalMessage || finalMessage.length < 10) {
+      // Use a contextual fallback based on conversation
+      const lastUserMessage = userResponses[userResponses.length - 1]?.message || ""
+
+      if (lastUserMessage.toLowerCase().includes("project")) {
+        finalMessage = "What specific technologies did you use in that project?"
+      } else if (lastUserMessage.toLowerCase().includes("team")) {
+        finalMessage = "How big was the team and what was your specific role?"
+      } else if (
+        lastUserMessage.toLowerCase().includes("improve") ||
+        lastUserMessage.toLowerCase().includes("optimize")
+      ) {
+        finalMessage = "What metrics improved and by how much?"
+      } else {
+        // Random fallback
+        finalMessage = FALLBACK_QUESTIONS[Math.floor(Math.random() * FALLBACK_QUESTIONS.length)]
+      }
+
+      console.log("Using fallback message:", finalMessage)
+    }
+
+    return NextResponse.json({
+      message: finalMessage,
+      shouldEnd: false,
+      bullets: [],
+    })
   } catch (error) {
-    console.error("Error in generate-followup API:", error)
+    console.error("=== Critical Error in Generate Follow-up ===")
+    console.error("Error details:", error)
+    console.error("Stack trace:", error instanceof Error ? error.stack : "No stack trace")
+
+    // Always return a valid response, never throw
     return NextResponse.json(
       {
-        error: "Internal server error",
-        details: error instanceof Error ? error.message : "Unknown error",
-        message: "I'm having trouble processing that. Can you tell me more about your recent work experience?",
+        message: "Can you tell me more about your recent work and the impact you've made?",
         shouldEnd: false,
         bullets: [],
       },
-      { status: 500 },
+      { status: 200 },
     )
   }
 }
