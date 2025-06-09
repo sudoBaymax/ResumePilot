@@ -302,27 +302,27 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
-                name: "Sarah Chen",
-                role: "Senior Frontend Engineer",
+                name: "Sarah C.",
+                role: "Junior Frontend Engineer",
                 company: "TechCorp",
                 quote:
-                  "This finally captured what I actually built at my last job. The AI understood the technical complexity better than I could explain it myself.",
+                  "This finally captured what I actually built at my first job. The AI understood the technical complexity better than I could explain it myself.",
                 rating: 5,
               },
               {
-                name: "Marcus Rodriguez",
-                role: "Full Stack Developer",
+                name: "Marcus R.",
+                role: "Junior Developer",
                 company: "StartupXYZ",
                 quote:
-                  "I've tried every resume builder out there. ResumePilot is the first one that actually gets what software engineers do day-to-day. The STAR and XYZ format bullets perfectly captured my impact.",
+                  "I've tried every resume builder out there. ResumePilot is the first one that actually gets what new developers do day-to-day. The STAR and XYZ format bullets perfectly captured my early career impact.",
                 rating: 5,
               },
               {
-                name: "Emily Zhang",
-                role: "DevOps Engineer",
+                name: "Emily Z.",
+                role: "Junior Software Engineer",
                 company: "CloudScale",
                 quote:
-                  "The voice interview felt natural and the questions were spot-on. My resume now actually reflects my infrastructure work properly.",
+                  "The voice interview felt natural and the questions were spot-on for someone early in their career. My resume now actually reflects my junior developer work properly.",
                 rating: 5,
               },
             ].map((testimonial, index) => (
