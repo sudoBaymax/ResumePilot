@@ -23,13 +23,6 @@ interface ConversationTurn {
   audioBlob?: Blob
 }
 
-const FALLBACK_QUESTIONS = [
-  "Can you tell me about a specific project you worked on recently?",
-  "What technologies have you been using in your current role?",
-  "Can you describe a challenge you solved and the impact it had?",
-  "What's the most significant improvement you've made in your work?",
-]
-
 export function ConversationalSession({ userId, roleType, onComplete }: ConversationalSessionProps) {
   const [step, setStep] = useState<"upload" | "interview" | "complete">("upload")
   const [resumeText, setResumeText] = useState("")
@@ -63,6 +56,41 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
     }
   }
 
+  const generatePersonalizedOpener = (resumeText: string): string => {
+    const text = resumeText.toLowerCase()
+
+    // Extract key technologies or roles from resume
+    const technologies = []
+    if (text.includes("react")) technologies.push("React")
+    if (text.includes("node")) technologies.push("Node.js")
+    if (text.includes("python")) technologies.push("Python")
+    if (text.includes("aws")) technologies.push("AWS")
+    if (text.includes("kubernetes")) technologies.push("Kubernetes")
+    if (text.includes("docker")) technologies.push("Docker")
+
+    const roles = []
+    if (text.includes("senior")) roles.push("senior")
+    if (text.includes("lead")) roles.push("lead")
+    if (text.includes("full stack")) roles.push("full-stack")
+    if (text.includes("frontend")) roles.push("frontend")
+    if (text.includes("backend")) roles.push("backend")
+
+    let opener = "Hi! I've reviewed your resume and I'm excited to learn more about your experience. "
+
+    if (technologies.length > 0) {
+      opener += `I see you work with ${technologies.slice(0, 2).join(" and ")}. `
+    }
+
+    if (roles.length > 0) {
+      opener += `As a ${roles[0]} developer, `
+    }
+
+    opener +=
+      "let's dive into a specific project you've worked on recently. Can you tell me about one project you're particularly proud of and what technologies you used to build it?"
+
+    return opener
+  }
+
   const startConversation = async () => {
     setConversationStartTime(Date.now())
     setError(null)
@@ -70,9 +98,10 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
     const newConversationId = crypto.randomUUID()
     setConversationId(newConversationId)
 
-    const initialMessage = `Hi! I've reviewed your resume and I'm excited to learn more about your experience. Let's have a conversation about your work - I'll ask questions and we can dive deeper into the projects and achievements that would make great resume bullet points. 
-
-Let's start simple: Can you tell me about your current role and what you've been working on recently?`
+    // Generate a personalized opener based on the resume
+    const initialMessage = resumeText
+      ? generatePersonalizedOpener(resumeText)
+      : "Hi! Let's talk about your recent work experience. Can you tell me about a specific project you've worked on recently? I'd love to hear about what you built and what technologies you used."
 
     setCurrentAIMessage(initialMessage)
     setConversation([
@@ -85,7 +114,7 @@ Let's start simple: Can you tell me about your current role and what you've been
 
     // Simulate AI speaking time
     setIsAITalking(true)
-    setTimeout(() => setIsAITalking(false), 3000)
+    setTimeout(() => setIsAITalking(false), 4000)
   }
 
   const handleUserResponse = async (audioBlob: Blob, duration: number) => {
@@ -157,7 +186,7 @@ Let's start simple: Can you tell me about your current role and what you've been
       if (shouldEndNow) {
         console.log("Ending conversation due to time/turn limit")
         const endMessage =
-          "Thank you for the great conversation! I have everything I need to create your resume bullet points."
+          "Perfect! I have excellent material from our conversation. Let me generate your professional resume bullets now."
 
         const finalAiTurn: ConversationTurn = {
           speaker: "ai",
@@ -176,7 +205,7 @@ Let's start simple: Can you tell me about your current role and what you've been
       }
 
       // Generate AI follow-up
-      console.log("Generating AI follow-up...")
+      console.log("Generating contextual AI follow-up...")
 
       let followUpData
       try {
@@ -200,12 +229,26 @@ Let's start simple: Can you tell me about your current role and what you've been
         }
 
         followUpData = await followUpResponse.json()
-        console.log("Follow-up response:", followUpData)
+        console.log("Contextual follow-up response:", followUpData)
       } catch (followUpError) {
         console.error("Follow-up generation failed:", followUpError)
 
-        // Use local fallback
-        const fallbackMessage = FALLBACK_QUESTIONS[Math.floor(Math.random() * FALLBACK_QUESTIONS.length)]
+        // Generate a contextual fallback based on what the user just said
+        const lastMessage = transcript.toLowerCase()
+        let fallbackMessage = "Can you tell me more about that?"
+
+        if (lastMessage.includes("react") || lastMessage.includes("frontend")) {
+          fallbackMessage = "What specific React features did you implement and how many users does it serve?"
+        } else if (lastMessage.includes("api") || lastMessage.includes("backend")) {
+          fallbackMessage = "What was the scale of this API and how did you optimize its performance?"
+        } else if (lastMessage.includes("database") || lastMessage.includes("sql")) {
+          fallbackMessage = "How did you design the database schema and what performance improvements did you achieve?"
+        } else if (lastMessage.includes("team") || lastMessage.includes("collaborate")) {
+          fallbackMessage = "How big was the team and what was your specific role in the project?"
+        } else if (lastMessage.includes("improve") || lastMessage.includes("optimize")) {
+          fallbackMessage = "What specific metrics improved and by how much?"
+        }
+
         followUpData = {
           message: fallbackMessage,
           shouldEnd: false,
@@ -218,12 +261,12 @@ Let's start simple: Can you tell me about your current role and what you've been
       // Add AI response to conversation
       const aiTurn: ConversationTurn = {
         speaker: "ai",
-        message: aiMessage || "Can you tell me more about that?",
+        message: aiMessage || "Can you elaborate on the technical details of that?",
         timestamp: Date.now(),
       }
 
       setConversation((prev) => [...prev, aiTurn])
-      setCurrentAIMessage(aiMessage || "Can you tell me more about that?")
+      setCurrentAIMessage(aiMessage || "Can you elaborate on the technical details of that?")
 
       // Simulate AI speaking
       setIsAITalking(true)
@@ -315,28 +358,31 @@ Let's start simple: Can you tell me about your current role and what you've been
           <CardContent className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <h4 className="font-medium text-gray-900">Conversational Format</h4>
+                <h4 className="font-medium text-gray-900">Contextual Questions</h4>
                 <p className="text-sm text-gray-600">
-                  We'll have a natural back-and-forth conversation about your experience, not long monologue recordings.
+                  I'll ask specific follow-up questions based on what you tell me, diving deeper into technologies,
+                  metrics, and impact.
                 </p>
               </div>
               <div className="space-y-2">
                 <h4 className="font-medium text-gray-900">15 Minutes Total</h4>
                 <p className="text-sm text-gray-600">
-                  Short, focused conversation that respects your time while gathering the details needed for great
+                  Short, focused conversation that builds on each response to gather the details needed for compelling
                   resume bullets.
                 </p>
               </div>
               <div className="space-y-2">
-                <h4 className="font-medium text-gray-900">Personalized Questions</h4>
+                <h4 className="font-medium text-gray-900">Resume-Based Start</h4>
                 <p className="text-sm text-gray-600">
-                  Questions based on your uploaded resume to dive deeper into your specific experience and achievements.
+                  Questions will be personalized based on your uploaded resume to explore your specific experience and
+                  achievements.
                 </p>
               </div>
               <div className="space-y-2">
-                <h4 className="font-medium text-gray-900">XYZ Format Bullets</h4>
+                <h4 className="font-medium text-gray-900">Quantified Results</h4>
                 <p className="text-sm text-gray-600">
-                  We'll generate professional bullet points in the proven XYZ format with quantified results.
+                  I'll help you identify specific metrics, technologies, and impact details for professional XYZ format
+                  bullets.
                 </p>
               </div>
             </div>
