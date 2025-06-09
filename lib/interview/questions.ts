@@ -11,148 +11,148 @@ export const interviewQuestions: InterviewQuestion[] = [
   // Introduction questions
   {
     id: "intro-1",
-    text: "Tell me about your current role and the main technologies you work with daily.",
+    text: "Tell me about your current role or recent projects and the main technologies you've been learning.",
     category: "intro",
     difficulty: "entry",
   },
   {
     id: "intro-2",
-    text: "Walk me through your software engineering journey and the most significant projects you've worked on.",
+    text: "Walk me through your journey into software development and any projects you've worked on so far.",
     category: "intro",
-    difficulty: "mid",
+    difficulty: "entry",
   },
 
   // Technical Achievement questions
   {
     id: "technical-1",
-    text: "Describe a complex technical system or feature you built from scratch. What technologies did you use and what challenges did you overcome?",
+    text: "Describe a project or feature you built recently. What technologies did you use and what did you learn?",
     category: "technical",
     roleTypes: ["software", "engineering", "technical"],
-    difficulty: "mid",
+    difficulty: "entry",
     followUp: [
-      "What was the scale of this system in terms of users or data?",
-      "How did you measure the success of this implementation?",
+      "How long did this project take you to complete?",
+      "What was the most challenging part of building this?",
     ],
   },
   {
     id: "technical-2",
-    text: "Tell me about a time when you had to optimize performance in an application or system. What was the problem and how did you solve it?",
+    text: "Tell me about a time when you had to debug an issue or fix a bug. How did you approach it?",
     category: "technical",
-    difficulty: "mid",
-    followUp: [
-      "What specific metrics improved after your optimization?",
-      "What tools did you use to identify and measure the performance issues?",
-    ],
+    difficulty: "entry",
+    followUp: ["What tools did you use to identify the problem?", "How long did it take you to resolve the issue?"],
   },
   {
     id: "technical-3",
-    text: "Describe a time when you had to integrate multiple systems or APIs. What was the architecture and what challenges did you face?",
+    text: "Describe a time when you worked with an API or integrated different parts of an application.",
     category: "technical",
-    difficulty: "mid",
+    difficulty: "entry",
     followUp: [
-      "How did you handle error handling and data consistency?",
-      "What was the impact on the overall system reliability?",
+      "What challenges did you face during the integration?",
+      "How did you test that everything was working correctly?",
     ],
   },
 
   // Impact and Achievement questions
   {
     id: "impact-1",
-    text: "Tell me about a project where your code or technical decisions had a significant business impact. What was the outcome?",
+    text: "Tell me about a project or contribution that you're proud of. What was the outcome?",
     category: "impact",
-    difficulty: "mid",
+    difficulty: "entry",
     followUp: [
-      "How did you measure or quantify this business impact?",
-      "What feedback did you receive from stakeholders?",
+      "How did you measure the success of this project?",
+      "What feedback did you receive from your team or users?",
     ],
   },
   {
     id: "impact-2",
-    text: "Describe a time when you automated a manual process or improved developer productivity. What was the before and after?",
+    text: "Describe a time when you improved something or made a process more efficient, even if it was small.",
     category: "impact",
     difficulty: "entry",
-    followUp: ["How much time did this save per week or month?", "Did other teams adopt your solution?"],
+    followUp: ["How much time did this save?", "Did others start using your improvement?"],
   },
 
-  // Leadership and Collaboration
+  // Learning and Growth
   {
     id: "behavioral-1",
-    text: "Tell me about a time when you had to lead a technical initiative or mentor other developers. What was your approach?",
+    text: "Tell me about a time when you had to learn a new technology or framework quickly for a project.",
     category: "behavioral",
-    difficulty: "senior",
-    followUp: ["What was the outcome for the team or project?", "How did you measure the success of your mentoring?"],
+    difficulty: "entry",
+    followUp: ["How did you approach learning it?", "What resources did you use?"],
   },
   {
     id: "behavioral-2",
-    text: "Describe a situation where you had to collaborate with non-technical stakeholders to deliver a technical solution.",
+    text: "Describe a situation where you collaborated with others on a coding project or received code review feedback.",
     category: "behavioral",
-    difficulty: "mid",
-    followUp: ["How did you communicate technical concepts to them?", "What was the final outcome of the project?"],
+    difficulty: "entry",
+    followUp: ["How did you handle the feedback?", "What did you learn from working with others?"],
   },
 
   // Problem-solving and Challenges
   {
     id: "challenge-1",
-    text: "Tell me about the most challenging bug or technical problem you've solved. What was your debugging process?",
+    text: "Tell me about a coding problem or bug that took you a while to solve. What was your process?",
     category: "challenge",
-    difficulty: "mid",
-    followUp: [
-      "What tools or techniques did you use to identify the root cause?",
-      "How did you prevent similar issues in the future?",
-    ],
+    difficulty: "entry",
+    followUp: ["What resources did you use to help solve it?", "How did you prevent similar issues in the future?"],
   },
   {
     id: "challenge-2",
-    text: "Describe a time when you had to work with legacy code or technical debt. How did you approach improving it?",
+    text: "Describe a time when you had to work with code that someone else wrote or legacy code.",
     category: "challenge",
-    difficulty: "mid",
-    followUp: [
-      "What was the impact of your improvements?",
-      "How did you balance new features with technical debt reduction?",
-    ],
+    difficulty: "entry",
+    followUp: ["How did you understand what the code was doing?", "What improvements did you make?"],
   },
 
   // Technical Strengths
   {
     id: "strength-1",
-    text: "What's your strongest technical skill or area of expertise, and can you give me a specific example of how you've applied it recently?",
+    text: "What programming language or technology are you most comfortable with, and can you give me an example of how you've used it?",
     category: "strength",
     difficulty: "entry",
-    followUp: [
-      "How do you stay current with developments in this area?",
-      "How has this expertise benefited your team or company?",
-    ],
+    followUp: ["What do you like most about this technology?", "How has learning this helped you in your projects?"],
   },
   {
     id: "strength-2",
-    text: "Tell me about a time when you had to quickly learn a new technology or framework for a project. How did you approach it?",
+    text: "Tell me about a time when you had to quickly pick up a new tool or library for a project.",
     category: "strength",
     difficulty: "entry",
-    followUp: ["How quickly were you able to become productive?", "What resources did you use to learn?"],
+    followUp: ["How quickly were you able to start using it effectively?", "What made it easier or harder to learn?"],
   },
 
-  // Architecture and Design
+  // School/Bootcamp Projects
   {
     id: "technical-4",
-    text: "Describe a time when you had to make important architectural decisions for a project. What factors did you consider?",
+    text: "Tell me about your favorite project from school, bootcamp, or personal learning. What made it interesting?",
     category: "technical",
-    difficulty: "senior",
-    followUp: [
-      "How did these decisions impact the project's success?",
-      "What would you do differently if you could start over?",
-    ],
+    difficulty: "entry",
+    followUp: ["What technologies did you use and why?", "If you could rebuild it now, what would you do differently?"],
   },
 
-  // Data and Analytics
+  // First Job/Internship Experience
   {
     id: "technical-5",
-    text: "Tell me about a time when you worked with large datasets or implemented data processing solutions. What was the scale and approach?",
+    text: "Describe your experience in your first development role or internship. What did you work on?",
     category: "technical",
-    difficulty: "mid",
-    followUp: [
-      "What technologies did you use for data processing?",
-      "How did you ensure data quality and performance?",
-    ],
+    difficulty: "entry",
+    followUp: ["What was the biggest thing you learned?", "How did you contribute to the team's goals?"],
+  },
+
+  // Version Control and Collaboration
+  {
+    id: "behavioral-3",
+    text: "Tell me about your experience with Git and version control. Have you worked on team projects?",
+    category: "behavioral",
+    difficulty: "entry",
+    followUp: ["How do you handle merge conflicts?", "What's your typical workflow when contributing to a project?"],
+  },
+
+  // Testing and Quality
+  {
+    id: "technical-6",
+    text: "Have you written any tests for your code? Tell me about your experience with testing.",
+    category: "technical",
+    difficulty: "entry",
+    followUp: ["What types of tests have you written?", "How has testing helped you catch issues?"],
   },
 ]
 
@@ -167,49 +167,37 @@ export function getInterviewQuestions(roleType?: string, count = 5): InterviewQu
     )
   }
 
-  // Ensure we have a good mix of question categories
+  // Prioritize entry-level questions
+  const entryQuestions = filteredQuestions.filter((q) => q.difficulty === "entry")
+  const otherQuestions = filteredQuestions.filter((q) => q.difficulty !== "entry")
+
+  // Ensure we have a good mix of question categories, prioritizing entry-level
   const categories = ["intro", "technical", "impact", "behavioral", "challenge", "strength"]
   const selectedQuestions: InterviewQuestion[] = []
 
-  // First, select one question from each major category
+  // First, select entry-level questions from each category
   categories.forEach((category) => {
-    const categoryQuestions = filteredQuestions.filter((q) => q.category === category)
+    const categoryQuestions = entryQuestions.filter((q) => q.category === category)
     if (categoryQuestions.length > 0) {
       const randomIndex = Math.floor(Math.random() * categoryQuestions.length)
       selectedQuestions.push(categoryQuestions[randomIndex])
-      // Remove the selected question from filteredQuestions
-      const index = filteredQuestions.findIndex((q) => q.id === categoryQuestions[randomIndex].id)
-      if (index !== -1) {
-        filteredQuestions.splice(index, 1)
-      }
     }
   })
 
-  // If we need more questions, prioritize technical and impact questions
-  const priorityCategories = ["technical", "impact", "challenge"]
-  while (selectedQuestions.length < count && filteredQuestions.length > 0) {
-    // Try to get from priority categories first
-    let found = false
-    for (const category of priorityCategories) {
-      const categoryQuestions = filteredQuestions.filter((q) => q.category === category)
-      if (categoryQuestions.length > 0) {
-        const randomIndex = Math.floor(Math.random() * categoryQuestions.length)
-        selectedQuestions.push(categoryQuestions[randomIndex])
-        const index = filteredQuestions.findIndex((q) => q.id === categoryQuestions[randomIndex].id)
-        if (index !== -1) {
-          filteredQuestions.splice(index, 1)
-        }
-        found = true
-        break
-      }
-    }
+  // Fill remaining slots with other entry-level questions
+  const remainingEntryQuestions = entryQuestions.filter((q) => !selectedQuestions.some((sq) => sq.id === q.id))
 
-    // If no priority questions left, pick any remaining question
-    if (!found && filteredQuestions.length > 0) {
-      const randomIndex = Math.floor(Math.random() * filteredQuestions.length)
-      selectedQuestions.push(filteredQuestions[randomIndex])
-      filteredQuestions.splice(randomIndex, 1)
-    }
+  while (selectedQuestions.length < count && remainingEntryQuestions.length > 0) {
+    const randomIndex = Math.floor(Math.random() * remainingEntryQuestions.length)
+    selectedQuestions.push(remainingEntryQuestions[randomIndex])
+    remainingEntryQuestions.splice(randomIndex, 1)
+  }
+
+  // If still need more questions, add from other difficulties
+  while (selectedQuestions.length < count && otherQuestions.length > 0) {
+    const randomIndex = Math.floor(Math.random() * otherQuestions.length)
+    selectedQuestions.push(otherQuestions[randomIndex])
+    otherQuestions.splice(randomIndex, 1)
   }
 
   return selectedQuestions.slice(0, count)
@@ -218,8 +206,8 @@ export function getInterviewQuestions(roleType?: string, count = 5): InterviewQu
 // Helper function to get questions by difficulty level
 export function getQuestionsByDifficulty(difficulty: "entry" | "mid" | "senior", count = 5): InterviewQuestion[] {
   const filteredQuestions = interviewQuestions.filter(
-    (q) => !q.difficulty || q.difficulty === difficulty || difficulty === "senior",
+    (q) => q.difficulty === difficulty || (difficulty === "entry" && !q.difficulty),
   )
 
-  return getInterviewQuestions("software engineer", count).filter((q) => filteredQuestions.some((fq) => fq.id === q.id))
+  return filteredQuestions.slice(0, count)
 }
