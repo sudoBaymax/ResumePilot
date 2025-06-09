@@ -303,26 +303,26 @@ export default function LandingPage() {
             {[
               {
                 name: "Sarah C.",
-                role: "Junior Frontend Engineer",
-                company: "TechCorp",
+                role: "Software Engineer",
+                company: "Spotify",
                 quote:
                   "This finally captured what I actually built at my first job. The AI understood the technical complexity better than I could explain it myself.",
                 rating: 5,
               },
               {
                 name: "Marcus R.",
-                role: "Junior Developer",
-                company: "StartupXYZ",
+                role: "Frontend Developer",
+                company: "Shopify",
                 quote:
-                  "I've tried every resume builder out there. ResumePilot is the first one that actually gets what new developers do day-to-day. The STAR and XYZ format bullets perfectly captured my early career impact.",
+                  "I've tried every resume builder out there. ResumePilot is the first one that actually gets what developers do day-to-day. The STAR and XYZ format bullets perfectly captured my impact.",
                 rating: 5,
               },
               {
                 name: "Emily Z.",
-                role: "Junior Software Engineer",
-                company: "CloudScale",
+                role: "Full Stack Developer",
+                company: "Stripe",
                 quote:
-                  "The voice interview felt natural and the questions were spot-on for someone early in their career. My resume now actually reflects my junior developer work properly.",
+                  "The voice interview felt natural and the questions were spot-on. My resume now actually reflects my development work properly.",
                 rating: 5,
               },
             ].map((testimonial, index) => (
