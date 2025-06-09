@@ -1,5 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
+import { OpenAI } from "openai"
+
+// Initialize OpenAI client at the top level
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+})
 
 // Track what types of questions have been asked to avoid repetition
 interface ConversationAnalysis {
@@ -48,6 +54,20 @@ function analyzeConversation(conversation: any[]): ConversationAnalysis {
     "ci/cd",
     "jenkins",
     "terraform",
+    "vue",
+    "angular",
+    "express",
+    "django",
+    "flask",
+    "spring",
+    "java",
+    "c#",
+    "php",
+    "ruby",
+    "go",
+    "rust",
+    "swift",
+    "kotlin",
   ]
   const mentionedTechnologies = techKeywords.filter((tech) => allUserText.includes(tech))
 
@@ -299,11 +319,6 @@ export async function POST(request: NextRequest) {
         console.warn("OpenAI API key not configured, using contextual fallback")
         throw new Error("OpenAI not configured")
       }
-
-      const { OpenAI } = await import("openai")
-      const openai = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-      })
 
       const conversationHistory = conversation
         .map((turn) => `${turn.speaker.toUpperCase()}: ${turn.message}`)
