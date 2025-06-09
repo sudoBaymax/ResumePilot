@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ResumeUpload } from "@/components/interview/resume-upload"
 import { ConversationalRecorder } from "@/components/interview/conversational-recorder"
+import { ChatInterview } from "@/components/interview/chat-interview"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
-import { FileText, CheckCircle, MessageCircle, ArrowRight, AlertTriangle } from "lucide-react"
+import { FileText, CheckCircle, MessageCircle, ArrowRight, AlertTriangle, Mic, MessageSquare } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface ConversationalSessionProps {
@@ -23,8 +24,11 @@ interface ConversationTurn {
   audioBlob?: Blob
 }
 
+type InterviewMode = "voice" | "chat"
+
 export function ConversationalSession({ userId, roleType, onComplete }: ConversationalSessionProps) {
-  const [step, setStep] = useState<"upload" | "interview" | "complete">("upload")
+  const [step, setStep] = useState<"upload" | "mode-select" | "interview" | "complete">("upload")
+  const [interviewMode, setInterviewMode] = useState<InterviewMode>("voice")
   const [resumeText, setResumeText] = useState("")
   const [resumeFileName, setResumeFileName] = useState("")
   const [conversation, setConversation] = useState<ConversationTurn[]>([])
@@ -52,8 +56,13 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
     setResumeText(text)
     setResumeFileName(fileName)
     if (text.trim()) {
-      setStep("interview")
+      setStep("mode-select")
     }
+  }
+
+  const handleModeSelect = (mode: InterviewMode) => {
+    setInterviewMode(mode)
+    setStep("interview")
   }
 
   const generatePersonalizedOpener = (resumeText: string): string => {
@@ -112,17 +121,19 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
       },
     ])
 
-    // Simulate AI speaking time
-    setIsAITalking(true)
-    setTimeout(() => setIsAITalking(false), 4000)
+    // Simulate AI speaking time for voice mode
+    if (interviewMode === "voice") {
+      setIsAITalking(true)
+      setTimeout(() => setIsAITalking(false), 4000)
+    }
   }
 
-  const handleUserResponse = async (audioBlob: Blob, duration: number) => {
+  const handleVoiceResponse = async (audioBlob: Blob, duration: number) => {
     setIsProcessing(true)
     setError(null)
 
     try {
-      console.log("Processing user response...")
+      console.log("Processing voice response...")
 
       const {
         data: { session },
@@ -156,132 +167,16 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
       }
 
       const transcribeData = await transcribeResponse.json()
-      console.log("Transcription response:", transcribeData)
-
-      const { transcript, warning } = transcribeData
-
-      if (warning) {
-        console.warn("Transcript storage warning:", warning)
-      }
+      const { transcript } = transcribeData
 
       if (!transcript || transcript.trim().length === 0) {
         throw new Error("No transcript received - please try speaking again")
       }
 
-      // Add user response to conversation
-      const userTurn: ConversationTurn = {
-        speaker: "user",
-        message: transcript,
-        timestamp: Date.now(),
-        audioBlob,
-      }
-
-      const updatedConversation = [...conversation, userTurn]
-      setConversation(updatedConversation)
-
-      // Check if we should end the conversation based on time or turns
-      const userResponses = updatedConversation.filter((turn) => turn.speaker === "user")
-      const shouldEndNow = currentTime >= MAX_CONVERSATION_TIME - 180 || userResponses.length >= 8
-
-      if (shouldEndNow) {
-        console.log("Ending conversation due to time/turn limit")
-        const endMessage =
-          "Perfect! I have excellent material from our conversation. Let me generate your professional resume bullets now."
-
-        const finalAiTurn: ConversationTurn = {
-          speaker: "ai",
-          message: endMessage,
-          timestamp: Date.now(),
-        }
-
-        setConversation((prev) => [...prev, finalAiTurn])
-        setCurrentAIMessage(endMessage)
-
-        // Generate bullets and end
-        setTimeout(() => {
-          endConversation([])
-        }, 2000)
-        return
-      }
-
-      // Generate AI follow-up
-      console.log("Generating contextual AI follow-up...")
-
-      let followUpData
-      try {
-        const followUpResponse = await fetch("/api/interview/generate-followup", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            conversation: updatedConversation,
-            resumeText,
-            roleType,
-            conversationTime: currentTime,
-            maxTime: MAX_CONVERSATION_TIME,
-          }),
-        })
-
-        if (!followUpResponse.ok) {
-          throw new Error(`Follow-up API failed: ${followUpResponse.status}`)
-        }
-
-        followUpData = await followUpResponse.json()
-        console.log("Contextual follow-up response:", followUpData)
-      } catch (followUpError) {
-        console.error("Follow-up generation failed:", followUpError)
-
-        // Generate a contextual fallback based on what the user just said
-        const lastMessage = transcript.toLowerCase()
-        let fallbackMessage = "Can you tell me more about that?"
-
-        if (lastMessage.includes("react") || lastMessage.includes("frontend")) {
-          fallbackMessage = "What specific React features did you implement and how many users does it serve?"
-        } else if (lastMessage.includes("api") || lastMessage.includes("backend")) {
-          fallbackMessage = "What was the scale of this API and how did you optimize its performance?"
-        } else if (lastMessage.includes("database") || lastMessage.includes("sql")) {
-          fallbackMessage = "How did you design the database schema and what performance improvements did you achieve?"
-        } else if (lastMessage.includes("team") || lastMessage.includes("collaborate")) {
-          fallbackMessage = "How big was the team and what was your specific role in the project?"
-        } else if (lastMessage.includes("improve") || lastMessage.includes("optimize")) {
-          fallbackMessage = "What specific metrics improved and by how much?"
-        }
-
-        followUpData = {
-          message: fallbackMessage,
-          shouldEnd: false,
-          bullets: [],
-        }
-      }
-
-      const { message: aiMessage, shouldEnd, bullets } = followUpData
-
-      // Add AI response to conversation
-      const aiTurn: ConversationTurn = {
-        speaker: "ai",
-        message: aiMessage || "Can you elaborate on the technical details of that?",
-        timestamp: Date.now(),
-      }
-
-      setConversation((prev) => [...prev, aiTurn])
-      setCurrentAIMessage(aiMessage || "Can you elaborate on the technical details of that?")
-
-      // Simulate AI speaking
-      setIsAITalking(true)
-      setTimeout(() => setIsAITalking(false), Math.min((aiMessage?.length || 50) * 50, 4000))
-
-      // Check if conversation should end
-      if (shouldEnd) {
-        setTimeout(() => {
-          endConversation(bullets || [])
-        }, 2000)
-      }
+      await processUserMessage(transcript)
     } catch (error) {
-      console.error("Error processing response:", error)
+      console.error("Error processing voice response:", error)
       setError(error instanceof Error ? error.message : "Unknown error occurred")
-
       toast({
         title: "Processing Error",
         description: "There was an error processing your response. Please try again.",
@@ -290,6 +185,149 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
     } finally {
       setIsProcessing(false)
       setTurnNumber((prev) => prev + 1)
+    }
+  }
+
+  const handleChatResponse = async (message: string) => {
+    setIsProcessing(true)
+    setError(null)
+
+    try {
+      await processUserMessage(message)
+    } catch (error) {
+      console.error("Error processing chat response:", error)
+      setError(error instanceof Error ? error.message : "Unknown error occurred")
+      toast({
+        title: "Processing Error",
+        description: "There was an error processing your message. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsProcessing(false)
+      setTurnNumber((prev) => prev + 1)
+    }
+  }
+
+  const processUserMessage = async (message: string) => {
+    console.log("Processing user message:", message.substring(0, 100))
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session?.access_token) {
+      throw new Error("No authentication token available")
+    }
+
+    // Add user response to conversation
+    const userTurn: ConversationTurn = {
+      speaker: "user",
+      message: message,
+      timestamp: Date.now(),
+    }
+
+    const updatedConversation = [...conversation, userTurn]
+    setConversation(updatedConversation)
+
+    // Check if we should end the conversation
+    const userResponses = updatedConversation.filter((turn) => turn.speaker === "user")
+    const shouldEndNow = currentTime >= MAX_CONVERSATION_TIME - 180 || userResponses.length >= 8
+
+    if (shouldEndNow) {
+      console.log("Ending conversation due to time/turn limit")
+      const endMessage =
+        "Perfect! I have excellent material from our conversation. Let me generate your professional resume bullets now."
+
+      const finalAiTurn: ConversationTurn = {
+        speaker: "ai",
+        message: endMessage,
+        timestamp: Date.now(),
+      }
+
+      setConversation((prev) => [...prev, finalAiTurn])
+      setCurrentAIMessage(endMessage)
+
+      setTimeout(() => {
+        endConversation([])
+      }, 2000)
+      return
+    }
+
+    // Generate AI follow-up using the appropriate API
+    console.log("Generating AI follow-up...")
+
+    let followUpData
+    try {
+      const apiEndpoint = interviewMode === "chat" ? "/api/interview/chat" : "/api/interview/generate-followup"
+
+      const requestBody =
+        interviewMode === "chat"
+          ? {
+              conversation: updatedConversation,
+              userMessage: message,
+              resumeText,
+              roleType,
+              conversationTime: currentTime,
+              maxTime: MAX_CONVERSATION_TIME,
+            }
+          : {
+              conversation: updatedConversation,
+              resumeText,
+              roleType,
+              conversationTime: currentTime,
+              maxTime: MAX_CONVERSATION_TIME,
+            }
+
+      const followUpResponse = await fetch(apiEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(requestBody),
+      })
+
+      if (!followUpResponse.ok) {
+        throw new Error(`Follow-up API failed: ${followUpResponse.status}`)
+      }
+
+      followUpData = await followUpResponse.json()
+      console.log("Follow-up response:", followUpData)
+    } catch (followUpError) {
+      console.error("Follow-up generation failed:", followUpError)
+
+      // Use fallback
+      followUpData = {
+        message:
+          "That's interesting! Can you tell me more about the specific technologies you used and the impact it had?",
+        shouldEnd: false,
+        bullets: [],
+      }
+    }
+
+    const { message: aiMessage, shouldEnd, bullets } = followUpData
+
+    // Add AI response to conversation
+    const aiTurn: ConversationTurn = {
+      speaker: "ai",
+      message: aiMessage || "Can you elaborate on the technical details of that?",
+      timestamp: Date.now(),
+    }
+
+    setConversation((prev) => [...prev, aiTurn])
+    setCurrentAIMessage(aiMessage || "Can you elaborate on the technical details of that?")
+
+    // Simulate AI speaking for voice mode
+    if (interviewMode === "voice") {
+      setIsAITalking(true)
+      setTimeout(() => setIsAITalking(false), Math.min((aiMessage?.length || 50) * 50, 4000))
+    }
+
+    // Check if conversation should end
+    if (shouldEnd) {
+      setTimeout(() => {
+        endConversation(bullets || [])
+      }, 2000)
     }
   }
 
@@ -318,7 +356,7 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
               transcript: conversationHistory,
               question: "Full conversation summary",
               role: roleType || "Software Engineer",
-              context: "Conversational interview",
+              context: `${interviewMode} interview`,
             }),
           })
 
@@ -358,6 +396,12 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
           <CardContent className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
+                <h4 className="font-medium text-gray-900">Choose Your Style</h4>
+                <p className="text-sm text-gray-600">
+                  Pick between voice conversation or text chat - whatever feels more comfortable for you.
+                </p>
+              </div>
+              <div className="space-y-2">
                 <h4 className="font-medium text-gray-900">Contextual Questions</h4>
                 <p className="text-sm text-gray-600">
                   I'll ask specific follow-up questions based on what you tell me, diving deeper into technologies,
@@ -372,19 +416,74 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
                 </p>
               </div>
               <div className="space-y-2">
-                <h4 className="font-medium text-gray-900">Resume-Based Start</h4>
-                <p className="text-sm text-gray-600">
-                  Questions will be personalized based on your uploaded resume to explore your specific experience and
-                  achievements.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <h4 className="font-medium text-gray-900">Quantified Results</h4>
+                <h4 className="font-medium text-gray-900">Professional Results</h4>
                 <p className="text-sm text-gray-600">
                   I'll help you identify specific metrics, technologies, and impact details for professional XYZ format
                   bullets.
                 </p>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (step === "mode-select") {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-center">Choose Your Interview Style</CardTitle>
+            <CardDescription className="text-center">
+              Pick the format that feels most comfortable for you
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card
+                className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-blue-200"
+                onClick={() => handleModeSelect("voice")}
+              >
+                <CardContent className="p-6 text-center">
+                  <Mic className="w-12 h-12 mx-auto mb-4 text-blue-600" />
+                  <h3 className="text-lg font-semibold mb-2">Voice Interview</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Speak naturally and have a conversational interview. I'll ask follow-up questions based on your
+                    responses.
+                  </p>
+                  <ul className="text-xs text-gray-500 space-y-1">
+                    <li>• Natural conversation flow</li>
+                    <li>• Automatic transcription</li>
+                    <li>• Great for detailed explanations</li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <Card
+                className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-green-200"
+                onClick={() => handleModeSelect("chat")}
+              >
+                <CardContent className="p-6 text-center">
+                  <MessageSquare className="w-12 h-12 mx-auto mb-4 text-green-600" />
+                  <h3 className="text-lg font-semibold mb-2">Chat Interview</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Type your responses in a chat interface. Perfect if you prefer writing or are in a quiet
+                    environment.
+                  </p>
+                  <ul className="text-xs text-gray-500 space-y-1">
+                    <li>• Type at your own pace</li>
+                    <li>• Edit before sending</li>
+                    <li>• No microphone needed</li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="text-center">
+              <p className="text-sm text-gray-500">
+                Both formats will generate the same high-quality resume bullets. Choose what works best for you!
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -402,41 +501,48 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
           </Alert>
         )}
 
-        <ConversationalRecorder
-          onResponseReady={handleUserResponse}
-          isProcessing={isProcessing}
-          currentMessage={currentAIMessage}
-          isAITalking={isAITalking}
-          conversationTime={currentTime}
-          maxTime={MAX_CONVERSATION_TIME}
-          conversationId={conversationId}
-          turnNumber={turnNumber}
-        />
-
-        {/* Conversation History */}
-        {conversation.length > 2 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Conversation So Far</CardTitle>
-              <CardDescription>
-                {conversation.filter((t) => t.speaker === "user").length} responses recorded
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="max-h-60 overflow-y-auto space-y-3">
-              {conversation.slice(-6).map((turn, index) => (
-                <div key={index} className={`flex ${turn.speaker === "user" ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className={`max-w-[80%] p-3 rounded-lg ${
-                      turn.speaker === "user" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-900"
-                    }`}
-                  >
-                    <p className="text-sm">{turn.message}</p>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+        {interviewMode === "voice" ? (
+          <ConversationalRecorder
+            onResponseReady={handleVoiceResponse}
+            isProcessing={isProcessing}
+            currentMessage={currentAIMessage}
+            isAITalking={isAITalking}
+            conversationTime={currentTime}
+            maxTime={MAX_CONVERSATION_TIME}
+            conversationId={conversationId}
+            turnNumber={turnNumber}
+          />
+        ) : (
+          <ChatInterview
+            onResponseReady={handleChatResponse}
+            isProcessing={isProcessing}
+            currentMessage={currentAIMessage}
+            conversationTime={currentTime}
+            maxTime={MAX_CONVERSATION_TIME}
+            conversationId={conversationId}
+            turnNumber={turnNumber}
+            conversation={conversation}
+          />
         )}
+
+        {/* Mode Switch */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">
+                Current mode: <strong>{interviewMode === "voice" ? "Voice" : "Chat"}</strong>
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setStep("mode-select")}
+                disabled={conversation.length > 2}
+              >
+                Switch Mode
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -450,7 +556,7 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
             Interview Complete!
           </CardTitle>
           <CardDescription className="text-green-700">
-            Generated {generatedBullets.length} professional resume bullet points from our conversation
+            Generated {generatedBullets.length} professional resume bullet points from our {interviewMode} conversation
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
