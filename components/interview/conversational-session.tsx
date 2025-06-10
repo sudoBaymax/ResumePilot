@@ -288,6 +288,8 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
       })
 
       if (!followUpResponse.ok) {
+        const errorText = await followUpResponse.text()
+        console.error(`Follow-up API failed: ${followUpResponse.status}`, errorText)
         throw new Error(`Follow-up API failed: ${followUpResponse.status}`)
       }
 
@@ -296,10 +298,24 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
     } catch (followUpError) {
       console.error("Follow-up generation failed:", followUpError)
 
-      // Use fallback
+      // Generate a contextual fallback based on what the user just said
+      const lastMessage = message.toLowerCase()
+      let fallbackMessage = "That's interesting! Can you tell me more about that?"
+
+      if (lastMessage.includes("react") || lastMessage.includes("frontend")) {
+        fallbackMessage = "What specific React features did you implement and how many users does it serve?"
+      } else if (lastMessage.includes("api") || lastMessage.includes("backend")) {
+        fallbackMessage = "What was the scale of this API and how did you optimize its performance?"
+      } else if (lastMessage.includes("database") || lastMessage.includes("sql")) {
+        fallbackMessage = "How did you design the database schema and what performance improvements did you achieve?"
+      } else if (lastMessage.includes("team") || lastMessage.includes("collaborate")) {
+        fallbackMessage = "How big was the team and what was your specific role in the project?"
+      } else if (lastMessage.includes("improve") || lastMessage.includes("optimize")) {
+        fallbackMessage = "What specific metrics improved and by how much?"
+      }
+
       followUpData = {
-        message:
-          "That's interesting! Can you tell me more about the specific technologies you used and the impact it had?",
+        message: fallbackMessage,
         shouldEnd: false,
         bullets: [],
       }
