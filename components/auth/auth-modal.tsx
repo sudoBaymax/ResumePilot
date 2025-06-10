@@ -23,13 +23,29 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
   if (!isOpen) return null
 
+  // Get the correct redirect URL based on environment
+  const getRedirectUrl = () => {
+    if (typeof window !== "undefined") {
+      const isProduction =
+        window.location.hostname === "resumepilot.ca" || window.location.hostname.includes("vercel.app")
+      return isProduction ? "https://resumepilot.ca/auth/callback" : `${window.location.origin}/auth/callback`
+    }
+    return "https://resumepilot.ca/auth/callback"
+  }
+
   const handleEmailAuth = async (type: "signin" | "signup") => {
     setLoading(true)
     try {
       const { error } =
         type === "signin"
           ? await supabase.auth.signInWithPassword({ email, password })
-          : await supabase.auth.signUp({ email, password })
+          : await supabase.auth.signUp({
+              email,
+              password,
+              options: {
+                emailRedirectTo: getRedirectUrl(),
+              },
+            })
 
       if (error) throw error
 
@@ -38,7 +54,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
         description:
           type === "signin"
             ? "You have been signed in successfully."
-            : "Please check your email to verify your account.",
+            : "Please check your email to verify your account. The verification link will redirect you to ResumePilot.",
       })
 
       if (type === "signin") onClose()
@@ -56,12 +72,17 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const handleMagicLink = async () => {
     setLoading(true)
     try {
-      const { error } = await supabase.auth.signInWithOtp({ email })
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: getRedirectUrl(),
+        },
+      })
       if (error) throw error
 
       toast({
         title: "Magic link sent!",
-        description: "Check your email for the login link.",
+        description: "Check your email for the login link. It will redirect you to ResumePilot when clicked.",
       })
       onClose()
     } catch (error: any) {
@@ -80,7 +101,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: getRedirectUrl(),
         },
       })
       if (error) throw error
@@ -97,6 +118,11 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
+          <div className="flex justify-center mb-4">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold">RP</span>
+            </div>
+          </div>
           <CardTitle>Welcome to ResumePilot</CardTitle>
           <CardDescription>Sign in to save your interviews and access unlimited resume generations</CardDescription>
         </CardHeader>

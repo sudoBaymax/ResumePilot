@@ -46,7 +46,30 @@ export function SubscriptionGuard({ action, children, fallback, onAccessDenied }
         body: JSON.stringify({ userId: user.id, action }),
       })
 
-      const result = await response.json()
+      let result
+      try {
+        // Try to parse as JSON
+        result = await response.json()
+      } catch (jsonError) {
+        console.error("Failed to parse response as JSON:", jsonError)
+
+        // If JSON parsing fails, create a fallback result
+        result = {
+          allowed: false,
+          reason: response.ok ? "Unknown error occurred" : `Server error (${response.status})`,
+          upgradeRequired: true,
+        }
+      }
+
+      // Ensure result has the expected structure
+      if (typeof result !== "object" || result === null) {
+        result = {
+          allowed: false,
+          reason: "Invalid server response",
+          upgradeRequired: true,
+        }
+      }
+
       setAccessResult(result)
 
       if (!result.allowed && onAccessDenied) {
@@ -54,9 +77,19 @@ export function SubscriptionGuard({ action, children, fallback, onAccessDenied }
       }
     } catch (error) {
       console.error("Error checking access:", error)
+
+      // Set a safe fallback result
+      const fallbackResult = {
+        allowed: false,
+        reason: "Unable to verify subscription access",
+        upgradeRequired: true,
+      }
+
+      setAccessResult(fallbackResult)
+
       toast({
-        title: "Error",
-        description: "Unable to verify subscription access",
+        title: "Connection Error",
+        description: "Unable to verify subscription access. Please try again.",
         variant: "destructive",
       })
     } finally {
