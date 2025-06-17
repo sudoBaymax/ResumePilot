@@ -58,14 +58,14 @@ export async function POST(request: NextRequest) {
       console.error("Error fetching profile:", profileError)
     }
 
-    // Construct the enhanced prompt for GPT-4o-mini
+    // Construct the enhanced prompt for GPT-4
     const prompt = constructEnhancedPrompt(transcript, question, role, experience, context, profile)
 
-    console.log("Calling OpenAI GPT-4o-mini with prompt length:", prompt.length)
+    console.log("Calling OpenAI GPT-4 with prompt length:", prompt.length)
 
-    // Call GPT-4o-mini with enhanced parameters
+    // Call GPT-4 with enhanced parameters
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4",
       messages: [
         {
           role: "system",
@@ -91,7 +91,7 @@ Always return valid JSON with well-structured bullet points.`,
     })
 
     const responseContent = completion.choices[0].message.content
-    console.log("OpenAI GPT-4o-mini response:", responseContent)
+    console.log("OpenAI GPT-4 response:", responseContent)
 
     let bullets
 
@@ -113,7 +113,7 @@ Always return valid JSON with well-structured bullet points.`,
         technologies: bullet.technologies || [],
       }))
     } catch (error) {
-      console.error("Error parsing GPT-4o-mini response:", error)
+      console.error("Error parsing GPT-4 response:", error)
       console.error("Raw response:", responseContent)
 
       // Enhanced fallback with better structure
@@ -163,7 +163,7 @@ Always return valid JSON with well-structured bullet points.`,
   }
 }
 
-// Enhanced prompt construction for GPT-4o-mini
+// Enhanced prompt construction for GPT-4
 function constructEnhancedPrompt(
   transcript: string,
   question: string,

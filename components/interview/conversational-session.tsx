@@ -19,6 +19,8 @@ import {
   Sparkles,
 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus"
+import { useRouter } from "next/navigation"
 import { AiResumeChatbot } from "@/components/interview/ai-resume-chatbot"
 
 interface ConversationalSessionProps {
@@ -55,6 +57,16 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
 
   const MAX_CONVERSATION_TIME = 15 * 60 // 15 minutes in seconds
   const currentTime = conversationStartTime > 0 ? Math.floor((Date.now() - conversationStartTime) / 1000) : 0
+
+  const router = useRouter()
+
+  const { subscription, usage, limits, loading: subLoading } = useSubscriptionStatus()
+
+  // Block interview if no active subscription or over limit
+  const overLimit =
+    subscription && usage && limits &&
+    ((limits.interviews !== undefined && usage.interviews_used >= limits.interviews && limits.interviews !== -1))
+  const noActive = !subLoading && (!subscription || subscription.status !== "active")
 
   useEffect(() => {
     if (step === "interview" && conversation.length === 0) {
@@ -279,6 +291,7 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
               roleType,
               conversationTime: currentTime,
               maxTime: MAX_CONVERSATION_TIME,
+              userEmail: session.user.email,
             }
           : {
               conversation: updatedConversation,
@@ -286,6 +299,7 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
               roleType,
               conversationTime: currentTime,
               maxTime: MAX_CONVERSATION_TIME,
+              userEmail: session.user.email,
             }
 
       const followUpResponse = await fetch(apiEndpoint, {
@@ -406,6 +420,28 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
 
     onComplete(bullets)
   }
+
+  // Add fix subscription handler
+  const handleFixSubscription = async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("No authentication token");
+      const res = await fetch("/api/subscription/fix-subscription-smart", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const json = await res.json();
+      if (json.success) {
+        router.refresh();
+      } else {
+        alert(json.error || "Failed to fix subscription");
+      }
+    } catch (e) {
+      alert("Error fixing subscription");
+    }
+  };
 
   if (step === "upload") {
     return (
@@ -545,6 +581,33 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
+
+        {/* Subscription/usage status */}
+        {subLoading ? (
+          <div>Loading subscription status...</div>
+        ) : noActive ? (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-5 w-5 mr-2" />
+            <AlertDescription>
+              No active subscription found. Please subscribe to continue.
+            </AlertDescription>
+          </Alert>
+        ) : overLimit ? (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-5 w-5 mr-2" />
+            <AlertDescription>
+              Interview limit reached ({usage?.interviews_used} / {limits?.interviews === Infinity ? "∞" : limits?.interviews}).
+              Please upgrade your plan or wait for the next period.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {/* Fix Subscription Button */}
+        <div className="my-4 flex justify-center">
+          <Button variant="outline" onClick={handleFixSubscription}>
+            Fix Subscription
+          </Button>
+        </div>
 
         {interviewMode === "voice" ? (
           <ConversationalRecorder

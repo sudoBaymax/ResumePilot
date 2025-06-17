@@ -29,20 +29,20 @@ export interface UsageTracking {
 export const PLAN_LIMITS = {
   starter: {
     interviews: 5000, // Temporarily increased for testing
-    coverLetters: 0,
-    templates: 1,
+    coverLetters: 5000,
+    templates: 8,
     features: ["basic_ats", "pdf_export", "star_xyz_format"],
   },
   pro: {
     interviews: 10,
     coverLetters: 0,
-    templates: -1, // unlimited
+    templates: 8, // unlimited
     features: ["advanced_ats", "pdf_export", "linkedin_export", "analytics", "star_xyz_format"],
   },
   career: {
     interviews: 30,
     coverLetters: 3,
-    templates: -1,
+    templates: 8,
     features: [
       "advanced_ats",
       "pdf_export",
