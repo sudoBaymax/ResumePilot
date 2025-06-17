@@ -11,6 +11,7 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { SubscriptionGuard } from "@/components/subscription/subscription-guard"
 import { useToast } from "@/hooks/use-toast"
+import { supabase } from "@/lib/supabase"
 
 const templateData = {
   "jakes-resume": {
@@ -81,17 +82,14 @@ export default function ResumeBuilderPage() {
     }
   }, [searchParams, toast])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    )
-  }
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/");
+    }
+  }, [user, loading, router]);
 
   if (!user) {
-    router.push("/")
-    return null
+    return null;
   }
 
   const template = templateData[templateId as keyof typeof templateData]
@@ -118,6 +116,27 @@ export default function ResumeBuilderPage() {
   const handleStartInterview = () => {
     router.push(`/resume-builder/${templateId}/interview`)
   }
+
+  const handleFixSubscription = async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("No authentication token");
+      const res = await fetch("/api/subscription/fix-subscription-smart", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const json = await res.json();
+      if (json.success) {
+        window.location.reload();
+      } else {
+        alert(json.error || "Failed to fix subscription");
+      }
+    } catch (e) {
+      alert("Error fixing subscription");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
@@ -195,6 +214,13 @@ export default function ResumeBuilderPage() {
                       onClick={() => router.push("/pricing")}
                     >
                       Upgrade Plan
+                    </Button>
+                    <Button
+                      className="w-full mt-2"
+                      variant="outline"
+                      onClick={handleFixSubscription}
+                    >
+                      Fix Subscription
                     </Button>
                   </CardContent>
                 </Card>
