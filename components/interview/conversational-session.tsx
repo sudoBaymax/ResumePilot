@@ -8,8 +8,18 @@ import { ConversationalRecorder } from "@/components/interview/conversational-re
 import { ChatInterview } from "@/components/interview/chat-interview"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
-import { FileText, CheckCircle, MessageCircle, ArrowRight, AlertTriangle, Mic, MessageSquare } from "lucide-react"
+import {
+  FileText,
+  CheckCircle,
+  MessageCircle,
+  ArrowRight,
+  AlertTriangle,
+  Mic,
+  MessageSquare,
+  Sparkles,
+} from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AiResumeChatbot } from "@/components/interview/ai-resume-chatbot"
 
 interface ConversationalSessionProps {
   userId: string
@@ -24,7 +34,7 @@ interface ConversationTurn {
   audioBlob?: Blob
 }
 
-type InterviewMode = "voice" | "chat"
+type InterviewMode = "voice" | "chat" | "ai-chatbot"
 
 export function ConversationalSession({ userId, roleType, onComplete }: ConversationalSessionProps) {
   const [step, setStep] = useState<"upload" | "mode-select" | "interview" | "complete">("upload")
@@ -494,6 +504,25 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
                   </ul>
                 </CardContent>
               </Card>
+
+              <Card
+                className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-purple-200"
+                onClick={() => handleModeSelect("ai-chatbot")}
+              >
+                <CardContent className="p-6 text-center">
+                  <Sparkles className="w-12 h-12 mx-auto mb-4 text-purple-600" />
+                  <h3 className="text-lg font-semibold mb-2">AI Resume Consultant</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Chat with an AI expert that asks intelligent follow-up questions and provides personalized resume
+                    advice.
+                  </p>
+                  <ul className="text-xs text-gray-500 space-y-1">
+                    <li>• Dynamic, context-aware questions</li>
+                    <li>• Personalized resume tips</li>
+                    <li>• Industry-specific guidance</li>
+                  </ul>
+                </CardContent>
+              </Card>
             </div>
 
             <div className="text-center">
@@ -528,7 +557,7 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
             conversationId={conversationId}
             turnNumber={turnNumber}
           />
-        ) : (
+        ) : interviewMode === "chat" ? (
           <ChatInterview
             onResponseReady={handleChatResponse}
             isProcessing={isProcessing}
@@ -538,6 +567,15 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
             conversationId={conversationId}
             turnNumber={turnNumber}
             conversation={conversation}
+          />
+        ) : (
+          <AiResumeChatbot
+            onComplete={(summary) => {
+              // Convert the summary to bullets and complete the session
+              endConversation([])
+            }}
+            resumeText={resumeText}
+            roleType={roleType}
           />
         )}
 
