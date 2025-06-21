@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { checkSubscriptionAccess } from "@/lib/middleware/subscription-guard"
+import { createUserPlan, type FeatureType } from "@/lib/subscription"
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate action type
-    const validActions = ["interview", "cover_letter", "template_access", "export_pdf"]
+    const validActions: FeatureType[] = ["interview", "cover_letter"]
     if (!validActions.includes(action)) {
       return NextResponse.json(
         {
@@ -45,8 +45,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const result = await checkSubscriptionAccess(userId, action)
-    return NextResponse.json(result)
+    // Get user email for admin check
+    const userEmail = body.userEmail || null
+
+    // Create user plan and check access
+    const userPlan = await createUserPlan(userId, userEmail)
+    const result = userPlan.canUseFeature(action)
+
+    return NextResponse.json({
+      ...result,
+      currentPlan: userPlan.subscription?.plan_name,
+      usage: {
+        interviews: userPlan.usage.interviews,
+        coverLetters: userPlan.usage.coverLetters,
+      }
+    })
   } catch (error) {
     console.error("Error checking subscription access:", error)
 

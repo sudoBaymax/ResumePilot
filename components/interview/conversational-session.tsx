@@ -221,6 +221,12 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
   const processUserMessage = async (message: string) => {
     console.log("Processing user message:", message.substring(0, 100))
 
+    // Validate message
+    if (!message || typeof message !== 'string' || message.trim() === '') {
+      console.error("Invalid message received:", message)
+      return
+    }
+
     const {
       data: { session },
     } = await supabase.auth.getSession()
@@ -268,43 +274,58 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
 
     let followUpData
     try {
-      const apiEndpoint = interviewMode === "chat" ? "/api/interview/chat" : "/api/interview/generate-followup"
+      if (interviewMode === "chat") {
+        // For chat mode, use the chat API
+        const response = await fetch("/api/interview/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            userMessage: message,
+          }),
+        })
 
-      const requestBody =
-        interviewMode === "chat"
-          ? {
-              conversation: updatedConversation,
-              userMessage: message,
-              resumeText,
-              roleType,
-              conversationTime: currentTime,
-              maxTime: MAX_CONVERSATION_TIME,
-            }
-          : {
-              conversation: updatedConversation,
-              resumeText,
-              roleType,
-              conversationTime: currentTime,
-              maxTime: MAX_CONVERSATION_TIME,
-            }
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error(`Chat API failed: ${response.status}`, errorText)
+          throw new Error(`Chat API failed: ${response.status}`)
+        }
 
-      const followUpResponse = await fetch(apiEndpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify(requestBody),
-      })
+        // Handle JSON response
+        followUpData = await response.json()
+        console.log("Chat response:", followUpData)
+      } else {
+        // For voice mode, use the generate-followup API
+        const apiEndpoint = "/api/interview/generate-followup"
 
-      if (!followUpResponse.ok) {
-        const errorText = await followUpResponse.text()
-        console.error(`Follow-up API failed: ${followUpResponse.status}`, errorText)
-        throw new Error(`Follow-up API failed: ${followUpResponse.status}`)
+        const requestBody = {
+          conversation: updatedConversation,
+          resumeText,
+          roleType,
+          conversationTime: currentTime,
+          maxTime: MAX_CONVERSATION_TIME,
+        }
+
+        const followUpResponse = await fetch(apiEndpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify(requestBody),
+        })
+
+        if (!followUpResponse.ok) {
+          const errorText = await followUpResponse.text()
+          console.error(`Follow-up API failed: ${followUpResponse.status}`, errorText)
+          throw new Error(`Follow-up API failed: ${followUpResponse.status}`)
+        }
+
+        followUpData = await followUpResponse.json()
+        console.log("Follow-up response:", followUpData)
       }
-
-      followUpData = await followUpResponse.json()
-      console.log("Follow-up response:", followUpData)
     } catch (followUpError) {
       console.error("Follow-up generation failed:", followUpError)
 

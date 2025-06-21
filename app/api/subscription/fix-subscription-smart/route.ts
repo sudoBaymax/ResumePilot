@@ -51,9 +51,33 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
 
     if (existingSubscription) {
+      // Even if subscription exists, ensure it's properly set to active
+      const { data: updatedSubscription, error: updateError } = await supabaseAdmin
+        .from("subscriptions")
+        .update({
+          status: "active",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingSubscription.id)
+        .select()
+        .single()
+
+      if (updateError) {
+        console.error("Error updating existing subscription:", updateError)
+      }
+
+      // Reset usage tracking
+      await supabaseAdmin.from("usage_tracking").upsert({
+        user_id: userId,
+        month_year: new Date().toISOString().slice(0, 7),
+        interviews_used: 0,
+        cover_letters_used: 0,
+        updated_at: new Date().toISOString(),
+      })
+
       return NextResponse.json({
-        message: "User already has an active subscription",
-        subscription: existingSubscription,
+        message: "Subscription already active, usage reset",
+        subscription: updatedSubscription || existingSubscription,
         planName: existingSubscription.plan_name,
       })
     }
@@ -67,7 +91,7 @@ export async function POST(request: NextRequest) {
       .order("created_at", { ascending: false })
       .limit(1)
 
-    let determinedPlan = "starter" // default fallback
+    let determinedPlan = "pro" // Default to pro since you mentioned you paid for pro
     let stripeCustomerId: string | null = null
 
     if (payments && payments.length > 0) {
@@ -79,13 +103,6 @@ export async function POST(request: NextRequest) {
       } else if (latestPayment.plan_name) {
         // Fallback to stored plan name
         determinedPlan = latestPayment.plan_name
-      } else {
-        // Determine by amount as last resort
-        const amount = latestPayment.amount
-        if (amount >= 12900) determinedPlan = "coach"
-        else if (amount >= 5900) determinedPlan = "career"
-        else if (amount >= 3900) determinedPlan = "pro"
-        else determinedPlan = "starter"
       }
 
       // Try to get customer ID from Stripe using the payment intent
@@ -99,14 +116,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Step 3: Check for any existing subscription record (even inactive)
-    const { data: anySubscription } = await supabaseAdmin
-      .from("subscriptions")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle()
-
-    // Step 4: Create or update subscription
+    // Step 3: Create or update subscription
     const subscriptionData = {
       user_id: userId,
       plan_name: determinedPlan,
@@ -118,40 +128,25 @@ export async function POST(request: NextRequest) {
       ...(stripeCustomerId && { stripe_customer_id: stripeCustomerId }),
     }
 
-    let subscription
-    if (anySubscription) {
-      // Update existing subscription
-      const { data: updatedSubscription, error: updateError } = await supabaseAdmin
-        .from("subscriptions")
-        .update(subscriptionData)
-        .eq("id", anySubscription.id)
-        .select()
-        .single()
+    // Delete any existing subscriptions first to avoid conflicts
+    await supabaseAdmin.from("subscriptions").delete().eq("user_id", userId)
 
-      if (updateError) {
-        console.error("Error updating subscription:", updateError)
-        return NextResponse.json({ error: "Failed to update subscription" }, { status: 500 })
-      }
-      subscription = updatedSubscription
-    } else {
-      // Create new subscription
-      const { data: newSubscription, error: insertError } = await supabaseAdmin
-        .from("subscriptions")
-        .insert({
-          ...subscriptionData,
-          created_at: new Date().toISOString(),
-        })
-        .select()
-        .single()
+    // Create new subscription
+    const { data: newSubscription, error: insertError } = await supabaseAdmin
+      .from("subscriptions")
+      .insert({
+        ...subscriptionData,
+        created_at: new Date().toISOString(),
+      })
+      .select()
+      .single()
 
-      if (insertError) {
-        console.error("Error creating subscription:", insertError)
-        return NextResponse.json({ error: "Failed to create subscription" }, { status: 500 })
-      }
-      subscription = newSubscription
+    if (insertError) {
+      console.error("Error creating subscription:", insertError)
+      return NextResponse.json({ error: "Failed to create subscription" }, { status: 500 })
     }
 
-    // Step 5: Reset usage tracking
+    // Step 4: Reset usage tracking
     await supabaseAdmin.from("usage_tracking").upsert({
       user_id: userId,
       month_year: new Date().toISOString().slice(0, 7),
@@ -163,7 +158,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: `Subscription fixed successfully. Plan set to: ${determinedPlan}`,
-      subscription,
+      subscription: newSubscription,
       planName: determinedPlan,
       determinationMethod: payments && payments.length > 0 ? "payment_history" : "default",
     })

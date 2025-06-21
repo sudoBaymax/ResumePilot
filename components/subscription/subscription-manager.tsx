@@ -8,13 +8,10 @@ import { Progress } from "@/components/ui/progress"
 import { useAuth } from "@/components/auth/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import {
-  getUserSubscription,
-  getUserUsage,
-  PLAN_LIMITS,
-  type Subscription,
-  type UsageTracking,
+  createUserPlan,
+  type FeatureType,
 } from "@/lib/subscription"
-import { CreditCard, Calendar, TrendingUp, AlertCircle } from "lucide-react"
+import { CreditCard, Calendar, TrendingUp, AlertCircle, Crown, Infinity } from "lucide-react"
 import { loadStripe } from "@stripe/stripe-js"
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
@@ -26,37 +23,24 @@ interface SubscriptionManagerProps {
 export function SubscriptionManager({ onUpgrade }: SubscriptionManagerProps) {
   const { user } = useAuth()
   const { toast } = useToast()
-  const [subscription, setSubscription] = useState<Subscription | null>(null)
-  const [usage, setUsage] = useState<UsageTracking | null>(null)
+  const [userPlan, setUserPlan] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (user) {
-      fetchSubscriptionData()
+      fetchUserPlan()
     }
   }, [user])
 
-  const fetchSubscriptionData = async () => {
+  const fetchUserPlan = async () => {
     if (!user) return
 
     try {
-      const [subData, usageData] = await Promise.all([getUserSubscription(user.id), getUserUsage(user.id)])
-
-      setSubscription(subData)
-      setUsage(usageData)
+      const plan = await createUserPlan(user.id, user.email)
+      setUserPlan(plan)
     } catch (error) {
-      console.error("Error fetching subscription data:", error)
-      // Don't show error toast for missing subscription - this is normal for new users
-      setSubscription(null)
-      setUsage({
-        id: "",
-        user_id: user.id,
-        month_year: new Date().toISOString().slice(0, 7),
-        interviews_used: 0,
-        cover_letters_used: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
+      console.error("Error fetching user plan:", error)
+      setUserPlan(null)
     } finally {
       setLoading(false)
     }
@@ -138,7 +122,57 @@ export function SubscriptionManager({ onUpgrade }: SubscriptionManagerProps) {
     )
   }
 
-  if (!subscription) {
+  // Admin users get special view
+  if (userPlan?.isAdmin) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Crown className="w-5 h-5 mr-2 text-yellow-500" />
+            Admin Access
+          </CardTitle>
+          <CardDescription>You have unlimited access to all features</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-center space-x-2 mb-2">
+              <Infinity className="w-5 h-5 text-yellow-600" />
+              <span className="font-medium text-yellow-800">Unlimited Everything</span>
+            </div>
+            <p className="text-sm text-yellow-700">
+              As an admin user, you have unlimited access to all features including interviews, cover letters, and templates.
+            </p>
+          </div>
+          
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Voice Interviews</span>
+              <span className="flex items-center">
+                <Infinity className="w-4 h-4 mr-1" />
+                Unlimited
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span>Cover Letters</span>
+              <span className="flex items-center">
+                <Infinity className="w-4 h-4 mr-1" />
+                Unlimited
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span>Templates</span>
+              <span className="flex items-center">
+                <Infinity className="w-4 h-4 mr-1" />
+                All Available
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!userPlan?.subscription) {
     return (
       <Card>
         <CardHeader>
@@ -157,14 +191,8 @@ export function SubscriptionManager({ onUpgrade }: SubscriptionManagerProps) {
     )
   }
 
-  const planLimits = PLAN_LIMITS[subscription.plan_name as keyof typeof PLAN_LIMITS]
-  const interviewsUsed = usage?.interviews_used || 0
-  const coverLettersUsed = usage?.cover_letters_used || 0
-
-  const getUsagePercentage = (used: number, limit: number) => {
-    if (limit === -1) return 0 // unlimited
-    return Math.min((used / limit) * 100, 100)
-  }
+  const plan = userPlan.getPlan()
+  if (!plan) return null
 
   const formatPlanName = (planName: string) => {
     return planName.charAt(0).toUpperCase() + planName.slice(1)
@@ -179,11 +207,11 @@ export function SubscriptionManager({ onUpgrade }: SubscriptionManagerProps) {
             <div>
               <CardTitle className="flex items-center">
                 <CreditCard className="w-5 h-5 mr-2" />
-                {formatPlanName(subscription.plan_name)} Plan
+                {formatPlanName(userPlan.subscription.plan_name)} Plan
               </CardTitle>
               <CardDescription>
-                <Badge variant={subscription.status === "active" ? "default" : "destructive"} className="mt-1">
-                  {subscription.status}
+                <Badge variant={userPlan.subscription.status === "active" ? "default" : "destructive"} className="mt-1">
+                  {userPlan.subscription.status}
                 </Badge>
               </CardDescription>
             </div>
@@ -193,15 +221,15 @@ export function SubscriptionManager({ onUpgrade }: SubscriptionManagerProps) {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {subscription.current_period_end && (
+          {userPlan.subscription.current_period_end && (
             <div className="flex items-center text-sm text-gray-600">
               <Calendar className="w-4 h-4 mr-2" />
-              {subscription.cancel_at_period_end ? "Cancels" : "Renews"} on{" "}
-              {new Date(subscription.current_period_end).toLocaleDateString()}
+              {userPlan.subscription.cancel_at_period_end ? "Cancels" : "Renews"} on{" "}
+              {new Date(userPlan.subscription.current_period_end).toLocaleDateString()}
             </div>
           )}
 
-          {subscription.cancel_at_period_end && (
+          {userPlan.subscription.cancel_at_period_end && (
             <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
               <p className="text-sm text-orange-800">
                 Your subscription will cancel at the end of the current period. You'll retain access until then.
@@ -222,34 +250,49 @@ export function SubscriptionManager({ onUpgrade }: SubscriptionManagerProps) {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Interviews */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Voice Interviews</span>
-              <span>
-                {interviewsUsed} / {planLimits.interviews === -1 ? "∞" : planLimits.interviews}
-              </span>
+          {plan.limits.interviews > 0 && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Voice Interviews</span>
+                <span>
+                  {plan.getUsageMessage("interview", userPlan.usage)}
+                  {plan.limits.interviews === -1 && " (∞)"}
+                </span>
+              </div>
+              <Progress 
+                value={userPlan.usage.getPercentage("interview", plan.limits.interviews)} 
+                className="h-2" 
+              />
+              {userPlan.isUsageDepleted("interview") && (
+                <p className="text-sm text-red-600">You've used all your interviews this month</p>
+              )}
             </div>
-            <Progress value={getUsagePercentage(interviewsUsed, planLimits.interviews)} className="h-2" />
-          </div>
+          )}
 
           {/* Cover Letters */}
-          {planLimits.coverLetters > 0 && (
+          {plan.limits.coverLetters > 0 && (
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Cover Letters</span>
                 <span>
-                  {coverLettersUsed} / {planLimits.coverLetters === -1 ? "∞" : planLimits.coverLetters}
+                  {plan.getUsageMessage("cover_letter", userPlan.usage)}
+                  {plan.limits.coverLetters === -1 && " (∞)"}
                 </span>
               </div>
-              <Progress value={getUsagePercentage(coverLettersUsed, planLimits.coverLetters)} className="h-2" />
+              <Progress 
+                value={userPlan.usage.getPercentage("cover_letter", plan.limits.coverLetters)} 
+                className="h-2" 
+              />
+              {userPlan.isUsageDepleted("cover_letter") && (
+                <p className="text-sm text-red-600">You've used all your cover letters this month</p>
+              )}
             </div>
           )}
 
           {/* Upgrade suggestion */}
-          {(getUsagePercentage(interviewsUsed, planLimits.interviews) > 80 ||
-            getUsagePercentage(coverLettersUsed, planLimits.coverLetters) > 80) && (
+          {userPlan.isUsageDepleted() && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800 mb-2">You're approaching your monthly limits!</p>
+              <p className="text-sm text-blue-800 mb-2">You've used all your monthly allowances!</p>
               <Button size="sm" onClick={onUpgrade}>
                 Upgrade Plan
               </Button>
@@ -259,14 +302,14 @@ export function SubscriptionManager({ onUpgrade }: SubscriptionManagerProps) {
       </Card>
 
       {/* Quick Upgrade Options */}
-      {subscription.plan_name !== "coach" && (
+      {userPlan.subscription.plan_name !== "coach" && (
         <Card>
           <CardHeader>
             <CardTitle>Upgrade Your Plan</CardTitle>
             <CardDescription>Get more features and higher limits</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {subscription.plan_name === "starter" && (
+            {userPlan.subscription.plan_name === "starter" && (
               <>
                 <Button className="w-full justify-between" onClick={() => handleUpgrade("pro", "monthly")}>
                   <span>Upgrade to Pro</span>
@@ -282,7 +325,7 @@ export function SubscriptionManager({ onUpgrade }: SubscriptionManagerProps) {
                 </Button>
               </>
             )}
-            {subscription.plan_name === "pro" && (
+            {userPlan.subscription.plan_name === "pro" && (
               <>
                 <Button className="w-full justify-between" onClick={() => handleUpgrade("career", "monthly")}>
                   <span>Upgrade to Career+</span>
@@ -298,7 +341,7 @@ export function SubscriptionManager({ onUpgrade }: SubscriptionManagerProps) {
                 </Button>
               </>
             )}
-            {subscription.plan_name === "career" && (
+            {userPlan.subscription.plan_name === "career" && (
               <Button className="w-full justify-between" onClick={() => handleUpgrade("coach", "monthly")}>
                 <span>Upgrade to Coach/Agency</span>
                 <span>$129/month</span>

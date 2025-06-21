@@ -88,8 +88,8 @@ export async function checkSubscriptionAccess(
             usage: {
               interviews_used: usage.interviews_used,
               cover_letters_used: usage.cover_letters_used || 0,
-              interviews_limit: 5000,
-              cover_letters_limit: 0,
+              interviews_limit: 100,
+              cover_letters_limit: 100,
             },
             upgradeRequired: true,
           }

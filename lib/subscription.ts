@@ -1,5 +1,32 @@
 import { supabase } from "./supabase"
 
+// ============================================================================
+// CLEAN OBJECT-ORIENTED SUBSCRIPTION SYSTEM
+// ============================================================================
+// 
+// Example usage:
+// 
+// const userPlan = await createUserPlan(userId, userEmail)
+// 
+// // Check if user can use a feature
+// const canUseInterview = userPlan.canUseFeature("interview")
+// if (canUseInterview.allowed) {
+//   // User can use interview
+//   await incrementUsage(userId, "interview")
+// } else {
+//   // Show error: canUseInterview.reason
+// }
+// 
+// // Get usage info
+// const usageInfo = userPlan.getUsageInfo("interview")
+// console.log(`${usageInfo.used}/${usageInfo.limit} interviews used`)
+// 
+// // Check if usage is depleted
+// if (userPlan.isUsageDepleted("interview")) {
+//   // Show upgrade prompt
+// }
+// ============================================================================
+
 export interface Subscription {
   id: string
   user_id: string
@@ -25,17 +52,25 @@ export interface UsageTracking {
   updated_at: string
 }
 
-// Plan limits
+// Admin emails with unlimited usage
+export const ADMIN_EMAILS = [
+  "jatoujoseph@gmail.com",
+  "admin@resumepilot.ca",
+  "support@resumepilot.ca",
+  "info@resumepilot.ca",
+]
+
+// Plan limits matching the pricing page exactly
 export const PLAN_LIMITS = {
   starter: {
-    interviews: 5000, // Temporarily increased for testing
-    coverLetters: 0,
-    templates: 1,
+    interviews: 1, // One-time purchase, 1 interview
+    coverLetters: 0, // No cover letters in starter
+    templates: 1, // Jake's Template only
     features: ["basic_ats", "pdf_export", "star_xyz_format"],
   },
   pro: {
     interviews: 10,
-    coverLetters: 0,
+    coverLetters: 0, // No cover letters in pro
     templates: -1, // unlimited
     features: ["advanced_ats", "pdf_export", "linkedin_export", "analytics", "star_xyz_format"],
   },
@@ -62,6 +97,183 @@ export const PLAN_LIMITS = {
 } as const
 
 export type PlanType = keyof typeof PLAN_LIMITS
+
+// Feature types
+export type FeatureType = "interview" | "cover_letter"
+
+// Usage class to track feature usage
+export class Usage {
+  constructor(
+    public interviews: number = 0,
+    public coverLetters: number = 0
+  ) {}
+
+  get(feature: FeatureType): number {
+    return feature === "interview" ? this.interviews : this.coverLetters
+  }
+
+  increment(feature: FeatureType): void {
+    if (feature === "interview") {
+      this.interviews++
+    } else {
+      this.coverLetters++
+    }
+  }
+
+  hasRemaining(feature: FeatureType, limit: number): boolean {
+    if (limit === -1) return true // unlimited
+    return this.get(feature) < limit
+  }
+
+  getRemaining(feature: FeatureType, limit: number): number {
+    if (limit === -1) return -1 // unlimited
+    return Math.max(0, limit - this.get(feature))
+  }
+
+  getPercentage(feature: FeatureType, limit: number): number {
+    if (limit === -1) return 0 // unlimited
+    return Math.min((this.get(feature) / limit) * 100, 100)
+  }
+}
+
+// Plan class to manage plan limits and features
+export class Plan {
+  constructor(
+    public name: string,
+    public limits: {
+      interviews: number
+      coverLetters: number
+      templates: number
+      features: readonly string[]
+    }
+  ) {}
+
+  getLimit(feature: FeatureType): number {
+    return feature === "interview" ? this.limits.interviews : this.limits.coverLetters
+  }
+
+  hasFeature(feature: FeatureType): boolean {
+    return this.getLimit(feature) > 0 || this.getLimit(feature) === -1
+  }
+
+  canUseFeature(feature: FeatureType, usage: Usage): boolean {
+    if (!this.hasFeature(feature)) return false
+    return usage.hasRemaining(feature, this.getLimit(feature))
+  }
+
+  getRemainingUsage(feature: FeatureType, usage: Usage): number {
+    return usage.getRemaining(feature, this.getLimit(feature))
+  }
+
+  getUsageMessage(feature: FeatureType, usage: Usage): string {
+    const limit = this.getLimit(feature)
+    const used = usage.get(feature)
+    
+    if (limit === -1) return "Unlimited"
+    if (limit === 0) return "Not included in your plan"
+    return `${used} / ${limit}`
+  }
+
+  getDepletionMessage(feature: FeatureType): string {
+    const limit = this.getLimit(feature)
+    if (limit === 0) return "Cover letters are not included in your plan"
+    return `You've used all ${limit} ${feature === "interview" ? "interviews" : "cover letters"} this month`
+  }
+}
+
+// User class to manage user's plan and usage
+export class UserPlan {
+  constructor(
+    public subscription: Subscription | null,
+    public usage: Usage,
+    public isAdmin: boolean = false
+  ) {}
+
+  getPlan(): Plan | null {
+    if (!this.subscription) return null
+    
+    const planLimits = PLAN_LIMITS[this.subscription.plan_name as PlanType]
+    if (!planLimits) return null
+    
+    return new Plan(this.subscription.plan_name, planLimits)
+  }
+
+  canUseFeature(feature: FeatureType): { allowed: boolean; reason?: string } {
+    // Admin users have unlimited access
+    if (this.isAdmin) {
+      return { allowed: true }
+    }
+
+    // No subscription
+    if (!this.subscription) {
+      return { allowed: false, reason: "No active subscription" }
+    }
+
+    const plan = this.getPlan()
+    if (!plan) {
+      return { allowed: false, reason: "Invalid plan" }
+    }
+
+    // Check if feature is available and has remaining usage
+    if (!plan.canUseFeature(feature, this.usage)) {
+      return { allowed: false, reason: plan.getDepletionMessage(feature) }
+    }
+
+    return { allowed: true }
+  }
+
+  getUsageInfo(feature: FeatureType): {
+    used: number
+    limit: number
+    remaining: number
+    percentage: number
+    message: string
+  } {
+    const plan = this.getPlan()
+    if (!plan) {
+      return {
+        used: 0,
+        limit: 0,
+        remaining: 0,
+        percentage: 0,
+        message: "No plan"
+      }
+    }
+
+    const used = this.usage.get(feature)
+    const limit = plan.getLimit(feature)
+    const remaining = plan.getRemainingUsage(feature, this.usage)
+    const percentage = this.usage.getPercentage(feature, limit)
+
+    return {
+      used,
+      limit,
+      remaining,
+      percentage,
+      message: plan.getUsageMessage(feature, this.usage)
+    }
+  }
+
+  isUsageDepleted(feature?: FeatureType): boolean {
+    if (this.isAdmin) return false
+    
+    const plan = this.getPlan()
+    if (!plan) return true
+
+    if (feature) {
+      return !plan.canUseFeature(feature, this.usage)
+    }
+
+    // Check all features
+    return !plan.canUseFeature("interview", this.usage) || 
+           !plan.canUseFeature("cover_letter", this.usage)
+  }
+}
+
+// Check if user has admin privileges
+export function isAdminUser(email: string): boolean {
+  return ADMIN_EMAILS.includes(email.toLowerCase())
+}
 
 // Get user's current subscription
 export async function getUserSubscription(userId: string): Promise<Subscription | null> {
@@ -137,63 +349,36 @@ export async function getUserUsage(userId: string): Promise<UsageTracking | null
       }
 }
 
-// Check if user can perform an action
+// Create UserPlan instance
+export async function createUserPlan(userId: string, userEmail?: string): Promise<UserPlan> {
+  const [subscription, usageData] = await Promise.all([
+    getUserSubscription(userId),
+    getUserUsage(userId)
+  ])
+
+  const usage = new Usage(
+    usageData?.interviews_used || 0,
+    usageData?.cover_letters_used || 0
+  )
+
+  const isAdmin = userEmail ? isAdminUser(userEmail) : false
+
+  return new UserPlan(subscription, usage, isAdmin)
+}
+
+// Simplified function for backward compatibility
 export async function canUserPerformAction(
   userId: string,
-  action: "interview" | "cover_letter",
+  action: FeatureType,
 ): Promise<{ allowed: boolean; reason?: string }> {
-  const subscription = await getUserSubscription(userId)
-  const usage = await getUserUsage(userId)
-
-  if (!subscription) {
-    return { allowed: false, reason: "No active subscription" }
-  }
-
-  if (!usage) {
-    return { allowed: false, reason: "Unable to fetch usage data" }
-  }
-
-  // Special handling for starter plan (one-time purchase) - temporarily increased limit for testing
-  if (subscription.plan_name === "starter") {
-    if (action === "interview") {
-      if (usage.interviews_used >= 5000) {
-        return { allowed: false, reason: "You've reached your interview limit (5000)" }
-      }
-      return { allowed: true }
-    }
-
-    if (action === "cover_letter") {
-      return { allowed: false, reason: "Cover letters are not included in the Starter plan" }
-    }
-  }
-
-  const planLimits = PLAN_LIMITS[subscription.plan_name as PlanType]
-  if (!planLimits) {
-    return { allowed: false, reason: "Invalid plan" }
-  }
-
-  if (action === "interview") {
-    const limit = planLimits.interviews
-    if (limit === -1) return { allowed: true } // unlimited
-    if (usage.interviews_used >= limit) {
-      return { allowed: false, reason: `Monthly interview limit reached (${limit})` }
-    }
-  }
-
-  if (action === "cover_letter") {
-    const limit = planLimits.coverLetters
-    if (limit === -1) return { allowed: true } // unlimited
-    if (limit === 0) return { allowed: false, reason: "Cover letters not included in your plan" }
-    if (usage.cover_letters_used >= limit) {
-      return { allowed: false, reason: `Monthly cover letter limit reached (${limit})` }
-    }
-  }
-
-  return { allowed: true }
+  const { data: userData } = await supabase.auth.getUser()
+  const userPlan = await createUserPlan(userId, userData?.user?.email)
+  
+  return userPlan.canUseFeature(action)
 }
 
 // Increment usage
-export async function incrementUsage(userId: string, action: "interview" | "cover_letter"): Promise<boolean> {
+export async function incrementUsage(userId: string, action: FeatureType): Promise<boolean> {
   const currentMonth = new Date().toISOString().slice(0, 7)
 
   const { error } = await supabase.rpc("increment_usage", {
@@ -208,4 +393,56 @@ export async function incrementUsage(userId: string, action: "interview" | "cove
   }
 
   return true
+}
+
+// Get plan details for display
+export function getPlanDetails(planName: string) {
+  return PLAN_LIMITS[planName as PlanType]
+}
+
+// Check if user has unlimited access (admin or coach plan)
+export async function hasUnlimitedAccess(userId: string): Promise<boolean> {
+  // Check for admin privileges first
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  if (!userError && userData?.user?.email && isAdminUser(userData.user.email)) {
+    return true
+  }
+
+  // Check subscription
+  const subscription = await getUserSubscription(userId)
+  if (!subscription) return false
+
+  return subscription.plan_name === "coach"
+}
+
+// Get remaining usage for display (backward compatibility)
+export async function getRemainingUsage(userId: string): Promise<{
+  interviews: { used: number; limit: number; remaining: number }
+  coverLetters: { used: number; limit: number; remaining: number }
+}> {
+  const userPlan = await createUserPlan(userId)
+  const plan = userPlan.getPlan()
+  
+  if (!plan) {
+    return {
+      interviews: { used: 0, limit: 0, remaining: 0 },
+      coverLetters: { used: 0, limit: 0, remaining: 0 },
+    }
+  }
+
+  const interviewInfo = userPlan.getUsageInfo("interview")
+  const coverLetterInfo = userPlan.getUsageInfo("cover_letter")
+
+  return {
+    interviews: {
+      used: interviewInfo.used,
+      limit: interviewInfo.limit,
+      remaining: interviewInfo.remaining,
+    },
+    coverLetters: {
+      used: coverLetterInfo.used,
+      limit: coverLetterInfo.limit,
+      remaining: coverLetterInfo.remaining,
+    },
+  }
 }

@@ -11,10 +11,10 @@ import { useAuth } from "@/components/auth/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { AlertTriangle, Crown, Zap, ArrowRight, Lock } from "lucide-react"
 import { useRouter } from "next/navigation"
-import type { SubscriptionCheckResult } from "@/lib/middleware/subscription-guard"
+import { createUserPlan, type FeatureType } from "@/lib/subscription"
 
 interface SubscriptionGuardProps {
-  action: "interview" | "cover_letter" | "template_access" | "export_pdf"
+  action: FeatureType
   children: React.ReactNode
   fallback?: React.ReactNode
   onAccessDenied?: () => void
@@ -24,7 +24,7 @@ export function SubscriptionGuard({ action, children, fallback, onAccessDenied }
   const { user } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
-  const [accessResult, setAccessResult] = useState<SubscriptionCheckResult | null>(null)
+  const [userPlan, setUserPlan] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -40,53 +40,17 @@ export function SubscriptionGuard({ action, children, fallback, onAccessDenied }
     }
 
     try {
-      const response = await fetch("/api/subscription/check-access", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, action }),
-      })
+      const plan = await createUserPlan(user.id, user.email)
+      setUserPlan(plan)
 
-      let result
-      try {
-        // Try to parse as JSON
-        result = await response.json()
-      } catch (jsonError) {
-        console.error("Failed to parse response as JSON:", jsonError)
-
-        // If JSON parsing fails, create a fallback result
-        result = {
-          allowed: false,
-          reason: response.ok ? "Unknown error occurred" : `Server error (${response.status})`,
-          upgradeRequired: true,
-        }
-      }
-
-      // Ensure result has the expected structure
-      if (typeof result !== "object" || result === null) {
-        result = {
-          allowed: false,
-          reason: "Invalid server response",
-          upgradeRequired: true,
-        }
-      }
-
-      setAccessResult(result)
-
-      if (!result.allowed && onAccessDenied) {
+      const accessResult = plan.canUseFeature(action)
+      
+      if (!accessResult.allowed && onAccessDenied) {
         onAccessDenied()
       }
     } catch (error) {
       console.error("Error checking access:", error)
-
-      // Set a safe fallback result
-      const fallbackResult = {
-        allowed: false,
-        reason: "Unable to verify subscription access",
-        upgradeRequired: true,
-      }
-
-      setAccessResult(fallbackResult)
-
+      
       toast({
         title: "Connection Error",
         description: "Unable to verify subscription access. Please try again.",
@@ -122,40 +86,36 @@ export function SubscriptionGuard({ action, children, fallback, onAccessDenied }
     )
   }
 
-  if (!accessResult?.allowed) {
+  if (!userPlan?.canUseFeature(action).allowed) {
     if (fallback) {
       return <>{fallback}</>
     }
 
-    return <AccessDeniedCard accessResult={accessResult} onUpgrade={handleUpgrade} action={action} />
+    return <AccessDeniedCard userPlan={userPlan} onUpgrade={handleUpgrade} action={action} />
   }
 
   return <>{children}</>
 }
 
 interface AccessDeniedCardProps {
-  accessResult: SubscriptionCheckResult | null
+  userPlan: any
   onUpgrade: () => void
-  action: string
+  action: FeatureType
 }
 
-function AccessDeniedCard({ accessResult, onUpgrade, action }: AccessDeniedCardProps) {
-  const getActionDisplayName = (action: string) => {
+function AccessDeniedCard({ userPlan, onUpgrade, action }: AccessDeniedCardProps) {
+  const getActionDisplayName = (action: FeatureType) => {
     switch (action) {
       case "interview":
         return "voice interviews"
       case "cover_letter":
         return "cover letters"
-      case "template_access":
-        return "premium templates"
-      case "export_pdf":
-        return "PDF exports"
       default:
         return "this feature"
     }
   }
 
-  const getUpgradeRecommendation = (currentPlan?: string, action?: string) => {
+  const getUpgradeRecommendation = (currentPlan?: string, action?: FeatureType) => {
     if (!currentPlan) return { plan: "Pro", price: "$39/month" }
 
     switch (currentPlan) {
@@ -173,8 +133,10 @@ function AccessDeniedCard({ accessResult, onUpgrade, action }: AccessDeniedCardP
     }
   }
 
-  const recommendation = getUpgradeRecommendation(accessResult?.currentPlan, action)
-  const usage = accessResult?.usage
+  const plan = userPlan?.getPlan()
+  const currentPlan = userPlan?.subscription?.plan_name
+  const recommendation = getUpgradeRecommendation(currentPlan, action)
+  const accessResult = userPlan?.canUseFeature(action)
 
   return (
     <Card className="border-orange-200 bg-gradient-to-br from-orange-50 to-yellow-50">
@@ -193,49 +155,45 @@ function AccessDeniedCard({ accessResult, onUpgrade, action }: AccessDeniedCardP
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Current Plan Info */}
-        {accessResult?.currentPlan && (
+        {currentPlan && (
           <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
             <div>
               <p className="text-sm font-medium text-gray-900">Current Plan</p>
-              <p className="text-sm text-gray-600 capitalize">{accessResult.currentPlan}</p>
+              <p className="text-sm text-gray-600 capitalize">{currentPlan}</p>
             </div>
-            <Badge variant="secondary">{accessResult.currentPlan}</Badge>
+            <Badge variant="outline" className="capitalize">
+              {userPlan.subscription?.status || "inactive"}
+            </Badge>
           </div>
         )}
 
-        {/* Usage Display */}
-        {usage && (
+        {/* Usage Progress */}
+        {plan && (
           <div className="space-y-4">
-            <h4 className="font-medium text-gray-900">Monthly Usage</h4>
-
-            {/* Interviews */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Voice Interviews</span>
-                <span>
-                  {usage.interviews_used} / {usage.interviews_limit === -1 ? "∞" : usage.interviews_limit}
-                </span>
+            <h4 className="font-medium text-gray-900">Current Usage</h4>
+            
+            {plan.limits.interviews > 0 && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Voice Interviews</span>
+                  <span>{plan.getUsageMessage("interview", userPlan.usage)}</span>
+                </div>
+                <Progress 
+                  value={userPlan.usage.getPercentage("interview", plan.limits.interviews)} 
+                  className="h-2" 
+                />
               </div>
-              <Progress
-                value={usage.interviews_limit === -1 ? 0 : (usage.interviews_used / usage.interviews_limit) * 100}
-                className="h-2"
-              />
-            </div>
+            )}
 
-            {/* Cover Letters */}
-            {usage.cover_letters_limit > 0 && (
+            {plan.limits.coverLetters > 0 && (
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Cover Letters</span>
-                  <span>
-                    {usage.cover_letters_used} / {usage.cover_letters_limit === -1 ? "∞" : usage.cover_letters_limit}
-                  </span>
+                  <span>{plan.getUsageMessage("cover_letter", userPlan.usage)}</span>
                 </div>
-                <Progress
-                  value={
-                    usage.cover_letters_limit === -1 ? 0 : (usage.cover_letters_used / usage.cover_letters_limit) * 100
-                  }
-                  className="h-2"
+                <Progress 
+                  value={userPlan.usage.getPercentage("cover_letter", plan.limits.coverLetters)} 
+                  className="h-2" 
                 />
               </div>
             )}
@@ -243,32 +201,62 @@ function AccessDeniedCard({ accessResult, onUpgrade, action }: AccessDeniedCardP
         )}
 
         {/* Upgrade CTA */}
-        <div className="p-4 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg text-white">
+        <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
           <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-semibold flex items-center">
-                <Crown className="w-4 h-4 mr-2" />
-                Upgrade to {recommendation.plan}
-              </h4>
-              <p className="text-sm opacity-90">Get unlimited access and more features</p>
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                <Crown className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">Upgrade to {recommendation.plan}</p>
+                <p className="text-sm text-gray-600">Get unlimited access to {getActionDisplayName(action)}</p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="font-bold">{recommendation.price}</p>
-              <p className="text-xs opacity-75">per month</p>
-            </div>
+            <Button onClick={onUpgrade} className="bg-gradient-to-r from-blue-600 to-purple-600">
+              <Zap className="w-4 h-4 mr-2" />
+              {recommendation.price}
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
           </div>
-          <Button className="w-full mt-3 bg-white text-blue-600 hover:bg-gray-100" onClick={onUpgrade}>
-            <Zap className="w-4 h-4 mr-2" />
-            Upgrade Now
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
         </div>
 
         {/* Feature Comparison */}
-        <div className="text-center">
-          <Button variant="outline" onClick={onUpgrade} className="w-full">
-            View All Plans & Features
-          </Button>
+        <div className="space-y-3">
+          <h4 className="font-medium text-gray-900">What you'll get:</h4>
+          <div className="space-y-2">
+            {action === "interview" && (
+              <>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm">More voice interviews per month</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm">Advanced AI coaching</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm">Detailed performance analytics</span>
+                </div>
+              </>
+            )}
+            {action === "cover_letter" && (
+              <>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm">AI-powered cover letter generation</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm">Multiple cover letter templates</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm">Role-specific customization</span>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
