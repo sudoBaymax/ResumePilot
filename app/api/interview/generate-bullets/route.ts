@@ -198,7 +198,7 @@ function constructEnhancedPrompt(
   prompt += `
 ## Task Requirements
 
-Generate 2-4 professional resume bullet points from this interview response using the following guidelines:
+Generate 3-4 professional resume bullet points from this interview response. Focus on quality over quantity - stop when you have 3-4 strong, impactful bullets.
 
 ### Format Options:
 1. **XYZ Format:** "Accomplished [X] as measured by [Y] by doing [Z]"
@@ -216,6 +216,7 @@ Generate 2-4 professional resume bullet points from this interview response usin
 - Extract implicit achievements from the response
 - Identify leadership, collaboration, or problem-solving elements
 - Highlight any innovation, efficiency gains, or process improvements
+- **IMPORTANT:** Stop after 3-4 high-quality bullets - don't force additional weak ones
 
 ## Output Format
 
@@ -235,7 +236,7 @@ Return a JSON object with this exact structure:
 }
 \`\`\`
 
-Focus on creating bullets that would impress both ATS systems and hiring managers in the software engineering field.`
+Focus on creating 3-4 bullets that would impress both ATS systems and hiring managers in the software engineering field. Quality over quantity.`
 
   return prompt
 }

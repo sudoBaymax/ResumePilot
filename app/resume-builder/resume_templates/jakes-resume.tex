@@ -1,0 +1,204 @@
+%-------------------------
+% Resume in Latex
+% Author : Jake Gutierrez
+% Based off of: https://github.com/sb2nov/resume
+% License : MIT
+%------------------------
+
+\documentclass[letterpaper,11pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\input{glyphtounicode}
+
+
+%----------FONT OPTIONS----------
+% sans-serif
+% \usepackage[sfdefault]{FiraSans}
+% \usepackage[sfdefault]{roboto}
+% \usepackage[sfdefault]{noto-sans}
+% \usepackage[default]{sourcesanspro}
+
+% serif
+% \usepackage{CormorantGaramond}
+% \usepackage{charter}
+
+
+\pagestyle{fancy}
+\fancyhf{} % clear all header and footer fields
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Adjust margins
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1.0in}
+
+\urlstyle{same}
+
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+% Sections formatting
+\titleformat{\section}{
+  \vspace{-4pt}\scshape\raggedright\large
+}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+
+% Ensure that generate pdf is machine readable/ATS parsable
+\pdfgentounicode=1
+
+%-------------------------
+% Custom commands
+\newcommand{\resumeItem}[1]{
+  \item\small{
+    {#1 \vspace{-2pt}}
+  }
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubSubheading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \textit{\small#1} & \textit{\small #2} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \small#1 & #2 \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
+
+\renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+%-------------------------------------------
+%%%%%%  RESUME STARTS HERE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{document}
+
+%----------HEADING----------
+\begin{center}
+    \textbf{\Huge \scshape Joseph Jatou} \\ \vspace{1pt}
+    \small 123-456-7890 $|$ \href{mailto:jatoujoseph@gmail.com}{\underline{jatoujoseph@gmail.com}} $|$ 
+    \href{https://linkedin.com/in/josephjatou}{\underline{LinkedIn.com/in/josephjatou}} $|$
+    \href{https://github.com/sudoBaymax}{\underline{GitHub.com/sudoBaymax}}
+\end{center}
+
+%-----------EDUCATION-----------
+\section{Education}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {Wilfrid Laurier University}{Waterloo, Ontario}
+      {Bachelors of Science in Computer Science, Minor in Business Administration}{Expected Graduation: Apr 2028}
+  \resumeSubHeadingListEnd
+
+%-----------EXPERIENCE-----------
+\section{Experience}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {Software Engineer Intern}{May 2025 - Present}
+      {VOYZI}{Miami, FL}
+      \resumeItemListStart
+        \resumeItem{Enhanced a multi-platform designated driver app for iOS, Android, and web using React Native, resulting in a 30\% increase in user engagement.}
+        \resumeItem{Developed robust backend APIs with Prisma and Express to streamline user, driver, and business workflows, improving data retrieval speed by 40\%.}
+        \resumeItem{Optimized backend performance and reliability through CI/CD automation, reducing deployment time by 50\% and minimizing downtime.}
+        \resumeItem{Collaborated with mobile and web teams to deliver 10+ new features and resolve bugs, achieving a 95\% customer satisfaction rating in user feedback surveys.}
+        \resumeItem{Implemented monitoring tools to track app performance, leading to a 20\% decrease in reported issues and enhancing overall user experience.}
+      \resumeItemListEnd
+    \resumeSubheading
+      {Co-Founder \& Software Engineer}{Nov 2024 - May 2025}
+      {GLANCE}{Waterloo, ON}
+      \resumeItemListStart
+        \resumeItem{Co-founded Glance, an AI startup, delivering personalized glasses recommendations that enhance user experience.}
+        \resumeItem{Developed a full-stack web application using FastAPI, React, and MongoDB, achieving deployment within 30 days.}
+        \resumeItem{Engineered machine learning models to detect 7+ beauty traits, improving recommendation accuracy and user engagement.}
+        \resumeItem{Built a robust API for optical stores, facilitating seamless integration of AI-powered product suggestions and increasing sales potential.}
+        \resumeItem{Hired and mentored a Business Development Intern, expanding B2B partnerships and enhancing market research efforts.}
+        \resumeItem{Conducted 75+ user interviews across 3 countries, validating market needs and informing product development strategies.}
+      \resumeItemListEnd
+    \resumeSubheading
+      {AI Research Intern}{Sep 2024 - Jan 2025}
+      {Github HeHeHaHa}{Waterloo, ON}
+      \resumeItemListStart
+        \resumeItem{Collaborate with a postdoctoral researcher on AI medical diagnosis research, enhancing model accuracy through innovative techniques.}
+        \resumeItem{Author the initial draft of a benchmarking paper for segmentation models, contributing to the advancement of AI methodologies in healthcare.}
+        \resumeItem{Build ML pipelines using Airflow, Docker, and ETL systems, achieving a reduction in model loss from 0.32 to 0.18, significantly improving model performance.}
+        \resumeItem{Fine-tune 12+ models on 10,000+ images, identifying and resolving 10+ critical bugs in preprocessing and training, leading to enhanced model reliability.}
+        \resumeItem{Accelerate literature review by 25\% by summarizing insights from 20+ papers, effectively guiding benchmarking efforts and informing research direction.}
+      \resumeItemListEnd
+  \resumeSubHeadingListEnd
+
+%-----------PROJECTS-----------
+\section{Projects}
+    \resumeSubHeadingListStart
+      \resumeProjectHeading
+          {\textbf{Eyewear Recommendation System} $|$ \emph{Not specified}}{Jan 2024 - May 2025}
+          \resumeItemListStart
+            \resumeItem{Enhanced face-shape model accuracy by 85\% using machine learning algorithms, resulting in significantly improved personalized eyewear fits.}
+            \resumeItem{Developed an augmented reality try-on feature utilizing OpenCV and Three.js, achieving successful testing with over 200 student users and increasing user engagement.}
+            \resumeItem{Implemented a user feedback loop to refine the recommendation system, leading to a 30\% increase in user satisfaction ratings based on post-try-on surveys.}
+            \resumeItem{Optimized the system's performance by reducing processing time by 40\% through efficient code refactoring and algorithm enhancements.}
+            \resumeItem{Collaborated with cross-functional teams to integrate the recommendation system into a mobile application, expanding the user base by 25\% within three months of launch.}
+          \resumeItemListEnd
+      \resumeProjectHeading
+          {\textbf{Find That Pokémon} $|$ \emph{Python \& CustomTkinter}}{Mar 2025 - Apr 2025}
+          \resumeItemListStart
+            \resumeItem{Developed a dark-mode Pokédex desktop application utilizing Python and CustomTkinter, enhancing user experience and accessibility.}
+            \resumeItem{Engineered a convolutional neural network (CNN) classifier achieving 95\% accuracy in recognizing Pokémon from user-inputted data, streamlining user interaction.}
+            \resumeItem{Implemented features such as stat visualization, autocomplete functionality, and CSV-backed storage, improving data management and user engagement.}
+            \resumeItem{Optimized application performance, resulting in a 30\% reduction in load times, significantly enhancing user satisfaction.}
+            \resumeItem{Collaborated with a team of developers to integrate user feedback, leading to a 20\% increase in app downloads within the first month of release.}
+          \resumeItemListEnd
+      \resumeProjectHeading
+          {\textbf{Tinder for Roommates} $|$ \emph{React Native, TypeScript, Vite, MongoDB}}{Aug 2024 - Sep 2024}
+          \resumeItemListStart
+            \resumeItem{Develop a React Native mobile application for student roommate matching, enhancing user engagement by 40\% through an intuitive swipe UI.}
+            \resumeItem{Utilize TypeScript and Vite to streamline development processes, reducing build times by 30\% and improving code maintainability.}
+            \resumeItem{Implement a MongoDB database to efficiently manage user profiles and match preferences, supporting over 1,000 active users with a 95\% match success rate.}
+            \resumeItem{Design and deploy a matching algorithm that increases user satisfaction by 25\%, resulting in a higher retention rate among users.}
+            \resumeItem{Collaborate with a cross-functional team to gather requirements and iterate on features, leading to a 50\% decrease in user-reported issues during beta testing.}
+          \resumeItemListEnd
+    \resumeSubHeadingListEnd
+
+%-----------PROGRAMMING SKILLS-----------
+\section{Technical Skills}
+ \begin{itemize}[leftmargin=0.15in, label={}]
+    \small{\item{
+     \textbf{Languages}{: Java, Python, C/C++, SQL (Postgres), JavaScript, HTML/CSS, R} \\
+     \textbf{Frameworks}{: React, Node.js, Flask, JUnit, WordPress, Material-UI, FastAPI} \\
+     \textbf{Developer Tools}{: Git, Docker, TravisCI, Google Cloud Platform, VS Code, Visual Studio, PyCharm, IntelliJ, Eclipse} \\
+     \textbf{Libraries}{: pandas, NumPy, Matplotlib}
+    }}
+ \end{itemize}
+
+%-------------------------------------------
+\end{document}
