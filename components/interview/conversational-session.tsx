@@ -484,7 +484,7 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
               >
                 <CardContent className="p-6 text-center">
                   <Mic className="w-12 h-12 mx-auto mb-4 text-blue-600" />
-                  <h3 className="text-lg font-semibold mb-2">Voice Interview</h3>
+                  <h3 className="text-lg font-semibold mb-2">Voice Interview (under development)</h3>
                   <p className="text-sm text-gray-600 mb-4">
                     Speak naturally and have a conversational interview. I'll ask follow-up questions based on your
                     responses.
@@ -521,7 +521,7 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
               >
                 <CardContent className="p-6 text-center">
                   <Sparkles className="w-12 h-12 mx-auto mb-4 text-purple-600" />
-                  <h3 className="text-lg font-semibold mb-2">Resume Analysis</h3>
+                  <h3 className="text-lg font-semibold mb-2">Resume Analysis (under development)</h3>
                   <p className="text-sm text-gray-600 mb-4">
                     Ask specific questions about your resume and get personalized insights and recommendations.
                   </p>
