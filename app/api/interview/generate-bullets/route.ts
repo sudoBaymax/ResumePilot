@@ -213,4 +213,21 @@ Generate 3-4 professional, sharp, and quantifiable resume bullet points from thi
 
 Return a JSON object with this exact structure:
 
+\`json
+{
+  "bullets": [
+    {
+      "text": "Accomplished [specific achievement] as measured by [quantifiable metric] by doing [specific action]",
+      "context": "Software Engineering",
+      "format": "XYZ",
+      "impact_level": "high|medium|low",
+      "technologies": ["React", "Node.js", "TypeScript"]
+    }
+  ]
+}
 \`
+
+Focus on extracting the most impactful achievements from the interview response. If the response lacks specific details, make reasonable assumptions based on the role and context provided.`;
+
+  return prompt
+}
