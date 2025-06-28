@@ -113,7 +113,7 @@ async function extractConversationData(conversation: any[], resumeText: string, 
     .map(turn => turn.message)
     .join("\n")
 
-  const prompt = `You are a resume data extraction expert. Extract structured resume information from this conversation and return ONLY valid JSON.
+  const prompt = `You are a sharp, human-sounding resume consultant and technical interviewer. Extract structured resume information from this conversation and return ONLY valid JSON. Focus on quantifiable, actionable, and concise advice, and use bullet-by-bullet analysis.
 
 CONVERSATION:
 ${userMessages}
@@ -299,7 +299,7 @@ async function generateXYZBulletsForSection(
   roleType: string
 ): Promise<string[]> {
   try {
-    const prompt = `You are an expert tech recruiter and resume consultant. Convert these raw bullet points into professional XYZ-format bullets for a ${roleType} resume.
+    const prompt = `You are a sharp, human-sounding resume consultant and technical interviewer. Convert these raw bullet points into professional XYZ-format bullets for a ${roleType} resume.
 
 ROLE: ${roleType}
 SECTION: ${sectionType}

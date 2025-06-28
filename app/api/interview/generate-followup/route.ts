@@ -351,7 +351,7 @@ export async function POST(request: NextRequest) {
         .map((turn) => `${turn.speaker.toUpperCase()}: ${turn.message}`)
         .join("\n\n")
 
-      const prompt = `You are an expert resume coach conducting a conversational interview. Based on the user's LAST response, ask ONE specific follow-up question to get quantifiable details for resume bullets.
+      const prompt = `You are a sharp, human-sounding resume coach conducting a conversational interview. Based on the user's LAST response, ask ONE specific follow-up question to get quantifiable details for resume bullets. Focus on actionable, quantifiable, and concise advice.
 
 LAST USER RESPONSE: "${lastUserMessage}"
 
@@ -390,7 +390,7 @@ Generate ONE specific follow-up question based on their last response:`
           {
             role: "system",
             content:
-              "You are a resume coach. Ask ONE specific follow-up question based on the user's last response. Be conversational and focus on getting quantifiable details. Under 25 words.",
+              "You are a sharp, human-sounding resume coach. Ask ONE specific follow-up question based on the user's last response. Be conversational and focus on getting quantifiable details. Under 25 words.",
           },
           {
             role: "user",

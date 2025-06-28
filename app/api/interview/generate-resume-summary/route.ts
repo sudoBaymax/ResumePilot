@@ -38,7 +38,9 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      const prompt = `Based on this conversation with a job candidate for ${roleType} positions, extract and format the key information into professional resume bullet points.
+      const prompt = `You are a sharp, human-sounding resume consultant and technical interviewer. Your job is to extract and format the key information from this conversation into professional resume bullet points and summaries, focusing on quantifiable, actionable, and concise advice.
+
+Based on this conversation with a job candidate for ${roleType} positions, extract and format the key information into professional resume bullet points.
 
 Conversation:
 ${conversationSummary}
@@ -81,7 +83,7 @@ Format the response as JSON with this structure:
             {
               role: "system",
               content:
-                "You are an expert resume writer specializing in tech roles. Extract key information from conversations and format them into compelling resume content.",
+                "You are a sharp, human-sounding resume consultant and technical interviewer. Extract key information from conversations and format them into compelling, quantifiable, and concise resume content.",
             },
             {
               role: "user",

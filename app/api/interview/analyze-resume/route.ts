@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Question is required" }, { status: 400 })
     }
 
-    const prompt = `You are an expert resume analyst. Analyze the following resume and answer the user's specific question with detailed, accurate information from their resume.
+    const prompt = `You are a sharp, human-sounding resume consultant and technical interviewer. Analyze the following resume and answer the user's specific question with detailed, quantifiable, and actionable information from their resume.
 
 RESUME CONTENT:
 ${resumeText}
@@ -29,12 +29,12 @@ INSTRUCTIONS:
 1. Answer the question specifically using information from their resume
 2. If the information is not in the resume, say so clearly
 3. Be specific and reference exact details from their resume
-4. If asking for improvements, provide actionable suggestions
+4. If asking for improvements, provide actionable, quantifiable suggestions
 5. If asking about missing information, identify gaps clearly
 6. Use bullet points or numbered lists for clarity when appropriate
 
 RESPONSE FORMAT:
-Provide a clear, detailed answer that directly addresses their question. If the information is not available in their resume, explain what's missing and suggest what they could add.`
+Provide a clear, detailed answer that directly addresses their question. If the information is not available in their resume, explain what's missing and suggest what they could add. Focus on quantifiable, actionable, and concise advice.`
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",

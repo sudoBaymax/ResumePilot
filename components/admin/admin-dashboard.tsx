@@ -27,7 +27,7 @@ interface AdminStats {
 }
 
 export function AdminDashboard() {
-  const { user } = useAuth()
+  const { user, token } = useAuth()
   const { toast } = useToast()
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -44,6 +44,7 @@ export function AdminDashboard() {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       })
 

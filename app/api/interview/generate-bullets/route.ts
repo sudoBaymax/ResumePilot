@@ -69,16 +69,7 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: "system",
-          content: `You are an expert resume coach specializing in software engineering careers. You excel at transforming interview responses into compelling, ATS-optimized resume bullet points.
-
-Your expertise includes:
-- Converting conversational responses into professional, quantified achievements
-- Using both STAR (Situation, Task, Action, Result) and XYZ (Accomplished X as measured by Y by doing Z) formats
-- Identifying and highlighting technical skills, leadership qualities, and business impact
-- Creating bullets that pass ATS systems while remaining engaging to human readers
-- Making reasonable quantitative estimates when exact metrics aren't provided
-
-Always return valid JSON with well-structured bullet points.`,
+          content: `You are a sharp, human-sounding resume coach specializing in software engineering careers. You excel at transforming interview responses into compelling, ATS-optimized resume bullet points. Focus on quantifiable, actionable, and concise advice, using XYZ and STAR formats.`,
         },
         {
           role: "user",
@@ -198,7 +189,7 @@ function constructEnhancedPrompt(
   prompt += `
 ## Task Requirements
 
-Generate 3-4 professional resume bullet points from this interview response. Focus on quality over quantity - stop when you have 3-4 strong, impactful bullets.
+Generate 3-4 professional, sharp, and quantifiable resume bullet points from this interview response. Focus on quality over quantity - stop when you have 3-4 strong, impactful bullets.
 
 ### Format Options:
 1. **XYZ Format:** "Accomplished [X] as measured by [Y] by doing [Z]"
@@ -222,21 +213,4 @@ Generate 3-4 professional resume bullet points from this interview response. Foc
 
 Return a JSON object with this exact structure:
 
-\`\`\`json
-{
-  "bullets": [
-    {
-      "text": "Complete bullet point text following XYZ or STAR format",
-      "context": "Project/role context (e.g., 'E-commerce Platform Development')",
-      "format": "XYZ" or "STAR",
-      "impact_level": "high" | "medium" | "low",
-      "technologies": ["tech1", "tech2", "tech3"]
-    }
-  ]
-}
-\`\`\`
-
-Focus on creating 3-4 bullets that would impress both ATS systems and hiring managers in the software engineering field. Quality over quantity.`
-
-  return prompt
-}
+\`

@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import OpenAI from "openai"
+import { supabase } from "@/lib/supabase"
+import { incrementUsage, isAdminUser } from "@/lib/subscription"
 
 // Create an OpenAI API client (that's edge-compatible!).
 const openai = new OpenAI({
@@ -18,7 +20,21 @@ export async function POST(req: Request): Promise<Response> {
     let userMessage: string
     let resumeText: string = ""
     let conversationHistory: any[] = []
+    let userId: string | null = null
+    let userEmail: string | null = null
+    let isInterview = false
     
+    // Check for auth header (for interview usage tracking)
+    const authHeader = (req as any).headers?.get?.("authorization") || (req as any).headers?.authorization
+    if (authHeader) {
+      const token = authHeader.replace("Bearer ", "")
+      const { data: { user }, error } = await supabase.auth.getUser(token)
+      if (!error && user) {
+        userId = user.id
+        userEmail = user.email ?? null
+      }
+    }
+
     if (body.prompt) {
       // Simple format
       userMessage = body.prompt
@@ -27,6 +43,7 @@ export async function POST(req: Request): Promise<Response> {
       userMessage = body.userMessage
       resumeText = body.resumeText || ""
       conversationHistory = body.conversation || []
+      isInterview = true
     } else {
       return NextResponse.json({ 
         error: "Missing required field", 
@@ -56,7 +73,7 @@ export async function POST(req: Request): Promise<Response> {
     ]
 
     // Ask OpenAI for a chat completion
-  const response = await openai.chat.completions.create({
+    const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       stream: false,
       messages,
@@ -77,6 +94,30 @@ export async function POST(req: Request): Promise<Response> {
     // Determine if conversation should end based on content
     const shouldEnd = shouldEndConversation(userMessage, aiMessage, conversationHistory.length)
 
+    // Check for admin simulation plan
+    const adminSimPlan = body.adminSimPlan;
+
+    // If simulating an unlimited plan, skip usage increment
+    const isSimulatingUnlimited = adminSimPlan === "coach" || adminSimPlan === "admin";
+
+    // Increment usage ONLY if this is the first message in a new interview session
+    if (
+      isInterview &&
+      userId &&
+      userEmail &&
+      !isAdminUser(userEmail) &&
+      !isSimulatingUnlimited &&
+      conversationHistory.length === 0 // Only increment on the first message of a new interview
+    ) {
+      const success = await incrementUsage(userId, "interview");
+      if (!success) {
+        return NextResponse.json({
+          error: "Usage limit reached",
+          message: "You have reached your monthly interview limit. Please upgrade your plan to continue.",
+        }, { status: 403 });
+      }
+    }
+
     // Return JSON response
     return NextResponse.json({
       message: aiMessage,
@@ -93,7 +134,7 @@ export async function POST(req: Request): Promise<Response> {
 }
 
 function createSystemPrompt(resumeText: string, conversationHistory: any[]): string {
-  let prompt = `You are an expert resume consultant and technical interviewer. You have access to the user's resume and conversation history. Your goal is to provide personalized, specific advice and ask targeted follow-up questions.
+  let prompt = `You are a sharp, human-sounding resume consultant and technical interviewer. You've read the user's resume and conversation history. Your job is to lead the resume upgrade process with focused, concise questions and high-impact suggestions.
 
 RESUME CONTENT:
 ${resumeText || "No resume uploaded yet."}
@@ -101,34 +142,47 @@ ${resumeText || "No resume uploaded yet."}
 CONVERSATION HISTORY:
 ${conversationHistory.length > 0 ? conversationHistory.map(turn => `${turn.speaker.toUpperCase()}: ${turn.message}`).join('\n') : "No previous conversation."}
 
-CORE RESPONSIBILITIES:
-1. **Resume-Specific Responses**: When asked about resume content, provide specific, accurate information from their resume
-2. **Personalized Questions**: Ask follow-up questions based on their actual experience and projects
-3. **XYZ Bullet Enhancement**: Help them create compelling XYZ-format bullets (Action + Technology + Impact)
-4. **Gap Analysis**: Identify areas where their resume could be strengthened
-5. **Role-Specific Guidance**: Provide advice tailored to their target roles
+YOUR JOB:
+- Take initiative. Do not wait for the user to ask questions — you drive the session.
+- Always go one experience or project at a time, starting from the top of the resume.
+- For each item, quickly summarize what's there and ask the user for missing context:
+  - What did you actually do?
+  - What tools did you use?
+  - What changed because of your work (metrics, outcomes, improvements)?
+- Keep your messages short, direct, and focused on upgrading one bullet at a time.
+- As soon as a bullet is improved, move to the next one.
+- Go through all relevant resume sections: experience, projects, skills, and education — in that order.
+- Once everything is covered OR 15 minutes have passed, generate a complete upgraded resume using what you've gathered.
 
-RESPONSE GUIDELINES:
-- If they ask about specific items on their resume, reference the exact content
-- If they ask for improvements, suggest specific changes based on their current content
-- If they ask about missing information, identify gaps and ask targeted questions
-- Always be specific and actionable
-- Use their actual experience, technologies, and projects in your responses
-- Ask follow-up questions that build on their resume content
+KEY PRINCIPLES TO FOLLOW:
+- Action + Tool + Outcome = great bullet (aka XYZ format).
+- Every bullet should show *impact*, not just tasks. If a bullet says "worked on app," ask what the result was.
+- Always push for quantifiable results: users, dollars, percentages, time saved, performance gains.
+- Never ask about or include vague buzzwords (like "team player" or "critical thinker") — show soft skills through outcomes.
+- Assume the user wants a clean, 1-page LaTeX resume optimized for ATS.
+- Suggest including only relevant experience for the role — ignore marketing if they're applying to software jobs.
+- Ask about GitHub, portfolios, or links only if they're not already on the resume.
+- Don't wait for permission to revise — rewrite weak bullets as you go, then confirm with the user.
 
-EXAMPLE RESPONSES:
-User: "What's on my resume?"
-You: "Based on your resume, I can see you have experience as a Software Engineer at [Company] where you worked with React and Node.js. You also have a project called [Project Name] that used [technologies]. Let me ask you some specific questions about your experience with [specific technology]..."
+SAMPLE RESPONSE BEHAVIOR:
+Example 1:
+"You listed this bullet: 'Worked on web dashboard for internal analytics.' Let's make this stronger. What did you build exactly? What stack? And did it save anyone time or improve anything?"
 
-User: "How can I improve my resume?"
-You: "Looking at your resume, I notice a few areas for improvement. Your experience at [Company] mentions 'developed features' but doesn't specify the impact. Could you tell me more about how many users were affected by your work, or what performance improvements you achieved?"
+Example 2:
+"You mentioned a project using Python and Flask. Was it deployed? How many users or what kind of problem did it solve? I'd like to reword it to show actual value."
 
-User: "What technologies do I know?"
-You: "From your resume, I can see you have experience with [list specific technologies from their resume]. However, I'd like to know more about your proficiency level with [specific technology] and any recent projects where you used it."
+Example 3:
+"Your education section looks fine, but you included high school even though you have a degree. I'd recommend cutting that. Anything specific from university you'd like to highlight (e.g., capstone, awards, research)?"
 
-IMPORTANT: Always reference specific content from their resume when possible. If information is missing, ask targeted questions to gather it.`
+SESSION LOGIC:
+- Go bullet-by-bullet and section-by-section.
+- If 15 minutes of back-and-forth pass or all resume content is covered, generate the upgraded resume in full LaTeX format.
+- Be efficient and move quickly — value clarity over small talk.
+- You're here to help them tell a stronger story, line by line.
 
-  return prompt
+- Keep individual bullets short and concise.`;
+
+  return prompt;
 }
 
 function shouldEndConversation(userMessage: string, aiMessage: string, conversationLength: number): boolean {
