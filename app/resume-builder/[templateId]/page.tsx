@@ -64,8 +64,6 @@ export default function ResumeBuilderPage() {
   const { toast } = useToast()
   const templateId = params.templateId as string
   const [resumeBullets, setResumeBullets] = useState<any[]>([])
-  const [fixing, setFixing] = useState(false)
-  const [fixed, setFixed] = useState(false)
 
   useEffect(() => {
     // Check if we have bullets from the interview
@@ -122,55 +120,7 @@ export default function ResumeBuilderPage() {
     router.push(`/resume-builder/${templateId}/interview`)
   }
 
-  const handleFixSubscription = async () => {
-    if (!user) return;
-    setFixing(true);
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        toast({
-          title: "Authentication Error",
-          description: "Please sign out and sign back in, then try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-      const response = await fetch("/api/subscription/fix-subscription-smart", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ userId: user.id }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        toast({
-          title: "Subscription Fixed",
-          description: `Your subscription has been updated to ${data.planName}. Please refresh the page.`,
-          variant: "default",
-        });
-        setFixed(true);
-      } else {
-        toast({
-          title: "Error",
-          description: data.error || "Failed to fix subscription",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error fixing subscription:", error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please contact support.",
-        variant: "destructive",
-      });
-    } finally {
-      setFixing(false);
-    }
-  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
@@ -248,14 +198,6 @@ export default function ResumeBuilderPage() {
                       onClick={() => router.push("/pricing")}
                     >
                       Upgrade Plan
-                    </Button>
-                    <Button
-                      className="w-full mt-2"
-                      variant="outline"
-                      onClick={handleFixSubscription}
-                      disabled={fixing}
-                    >
-                      {fixing ? "Fixing..." : "Fix Subscription"}
                     </Button>
                   </CardContent>
                 </Card>

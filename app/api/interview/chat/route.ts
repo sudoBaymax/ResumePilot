@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import OpenAI from "openai"
 import { supabase } from "@/lib/supabase"
 import { incrementUsage, isAdminUser } from "@/lib/subscription"
+import { checkAndIncrementUsage } from "@/lib/middleware/subscription-guard"
 
 // Create an OpenAI API client (that's edge-compatible!).
 const openai = new OpenAI({
@@ -109,11 +110,12 @@ export async function POST(req: Request): Promise<Response> {
       !isSimulatingUnlimited &&
       conversationHistory.length === 0 // Only increment on the first message of a new interview
     ) {
-      const success = await incrementUsage(userId, "interview");
-      if (!success) {
+      const usageResult = await checkAndIncrementUsage(userId, "interview");
+      console.log("[Interview Usage] checkAndIncrementUsage result:", usageResult);
+      if (!usageResult.success) {
         return NextResponse.json({
           error: "Usage limit reached",
-          message: "You have reached your monthly interview limit. Please upgrade your plan to continue.",
+          message: usageResult.error || "You have reached your monthly interview limit. Please upgrade your plan to continue.",
         }, { status: 403 });
       }
     }

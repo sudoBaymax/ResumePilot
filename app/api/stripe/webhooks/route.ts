@@ -151,7 +151,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       console.log(`Using fallback plan: ${actualPlanName} (price ID: ${actualPriceId})`)
     }
 
-    // Record payment for both one-time and subscription payments
+    // Record payment
     if (session.payment_intent) {
       console.log("Recording payment in database")
       const { error: paymentError } = await supabaseAdmin.from("payments").insert({
@@ -174,44 +174,67 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     // Handle subscription creation/update
     if (session.mode === "payment") {
       console.log("Creating one-time payment subscription")
-      // One-time payment (starter plan)
       await createOrUpdateSubscription(userId, actualPlanName, {
         stripe_customer_id: session.customer as string,
         stripe_price_id: actualPriceId,
         status: "active",
         current_period_start: new Date().toISOString(),
-        current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year for one-time
+        current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year
         cancel_at_period_end: false,
       })
     } else if (session.mode === "subscription" && session.subscription) {
       console.log("Creating recurring subscription")
-      // Recurring subscription
       const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
       await updateSubscriptionInDatabase(subscription, userId, actualPlanName)
     }
 
-    // Initialize/reset usage tracking
-    console.log("Initializing usage tracking")
+    // 🆕 Assign resume credits
+    let resumeCredits = 0
+    switch (actualPriceId) {
+      case process.env.PRICE_ID_STARTER:
+        resumeCredits = 1
+        break
+      case process.env.PRICE_ID_PRO_MONTH:
+      case process.env.PRICE_ID_PRO_YEAR:
+        resumeCredits = 10
+        break
+      case process.env.PRICE_ID_CAREER_MONTH:
+      case process.env.PRICE_ID_CAREER_YEAR:
+        resumeCredits = 30
+        break
+      case process.env.PRICE_ID_COACH_MONTH:
+      case process.env.PRICE_ID_COACH_YEAR:
+        resumeCredits = 1000000 // effectively unlimited
+        break
+      default:
+        resumeCredits = 0
+        break
+    }
+
+    // Initialize usage tracking with resume credits
+    console.log("Initializing usage tracking with resume credits")
     const { error: usageError } = await supabaseAdmin.from("usage_tracking").upsert({
       user_id: userId,
       month_year: new Date().toISOString().slice(0, 7),
       interviews_used: 0,
       cover_letters_used: 0,
+      resume_credits_remaining: resumeCredits,
       updated_at: new Date().toISOString(),
     })
 
     if (usageError) {
       console.error("Error initializing usage tracking:", usageError)
     } else {
-      console.log("Usage tracking initialized successfully")
+      console.log(`Usage tracking initialized: ${resumeCredits} resume credits`)
     }
 
-    console.log(`Successfully processed checkout for user ${userId}, plan ${actualPlanName}`)
+    console.log(`✅ Successfully processed checkout for user ${userId}, plan ${actualPlanName}`)
   } catch (error) {
     console.error("Error in handleCheckoutCompleted:", error)
-    // Don't throw - we don't want to fail the webhook
+    // Do not throw to avoid webhook retries
   }
 }
+
 
 async function createOrUpdateSubscription(
   userId: string,

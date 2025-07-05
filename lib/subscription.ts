@@ -48,6 +48,7 @@ export interface UsageTracking {
   month_year: string
   interviews_used: number
   cover_letters_used: number
+  resume_credits_remaining?: number
   created_at: string
   updated_at: string
 }
@@ -100,39 +101,66 @@ export const PLAN_LIMITS = {
 export type PlanType = keyof typeof PLAN_LIMITS
 
 // Feature types
-export type FeatureType = "interview" | "cover_letter"
+export type FeatureType = "interview" | "cover_letter" | "template_access" | "export_pdf"
 
 // Usage class to track feature usage
 export class Usage {
   constructor(
     public interviews: number = 0,
-    public coverLetters: number = 0
+    public coverLetters: number = 0,
+    public resume_credits_remaining: number = 0 // Add this property
   ) {}
 
   get(feature: FeatureType): number {
-    return feature === "interview" ? this.interviews : this.coverLetters
+    switch (feature) {
+      case "interview":
+        return this.interviews
+      case "cover_letter":
+        return this.coverLetters
+      case "template_access":
+      case "export_pdf":
+        return 0 // These don't track usage
+      default:
+        return 0
+    }
   }
 
   increment(feature: FeatureType): void {
-    if (feature === "interview") {
-      this.interviews++
-    } else {
-      this.coverLetters++
+    switch (feature) {
+      case "interview":
+        this.interviews++
+        break
+      case "cover_letter":
+        this.coverLetters++
+        break
+      case "template_access":
+      case "export_pdf":
+        // These don't increment usage
+        break
     }
   }
 
   hasRemaining(feature: FeatureType, limit: number): boolean {
     if (limit === -1) return true // unlimited
+    if (feature === "template_access" || feature === "export_pdf") {
+      return true // These features don't have usage limits
+    }
     return this.get(feature) < limit
   }
 
   getRemaining(feature: FeatureType, limit: number): number {
     if (limit === -1) return -1 // unlimited
+    if (feature === "template_access" || feature === "export_pdf") {
+      return -1 // These features don't have usage limits
+    }
     return Math.max(0, limit - this.get(feature))
   }
 
   getPercentage(feature: FeatureType, limit: number): number {
     if (limit === -1) return 0 // unlimited
+    if (feature === "template_access" || feature === "export_pdf") {
+      return 0 // These features don't track usage percentage
+    }
     return Math.min((this.get(feature) / limit) * 100, 100)
   }
 }
@@ -150,15 +178,38 @@ export class Plan {
   ) {}
 
   getLimit(feature: FeatureType): number {
-    return feature === "interview" ? this.limits.interviews : this.limits.coverLetters
+    switch (feature) {
+      case "interview":
+        return this.limits.interviews
+      case "cover_letter":
+        return this.limits.coverLetters
+      case "template_access":
+        return this.limits.templates
+      case "export_pdf":
+        return 1 // All plans with templates can export PDF
+      default:
+        return 0
+    }
   }
 
   hasFeature(feature: FeatureType): boolean {
-    return this.getLimit(feature) > 0 || this.getLimit(feature) === -1
+    const limit = this.getLimit(feature)
+    return limit > 0 || limit === -1
   }
 
   canUseFeature(feature: FeatureType, usage: Usage): boolean {
+    // Special logic for Starter plan interviews: use resume_credits_remaining
+    if (this.name === "starter" && feature === "interview") {
+      return usage.resume_credits_remaining > 0
+    }
     if (!this.hasFeature(feature)) return false
+    
+    // For non-usage features, just check if the plan has the feature
+    if (feature === "template_access" || feature === "export_pdf") {
+      return this.hasFeature(feature)
+    }
+    
+    // For usage-based features, check remaining usage
     return usage.hasRemaining(feature, this.getLimit(feature))
   }
 
@@ -177,7 +228,18 @@ export class Plan {
 
   getDepletionMessage(feature: FeatureType): string {
     const limit = this.getLimit(feature)
-    if (limit === 0) return "Cover letters are not included in your plan"
+    if (limit === 0) {
+      switch (feature) {
+        case "cover_letter":
+          return "Cover letters are not included in your plan"
+        case "template_access":
+          return "Template access is not included in your plan"
+        case "export_pdf":
+          return "PDF export is not included in your plan"
+        default:
+          return "This feature is not included in your plan"
+      }
+    }
     return `You've used all ${limit} ${feature === "interview" ? "interviews" : "cover letters"} this month`
   }
 }
@@ -210,12 +272,33 @@ export class UserPlan {
       return { allowed: false, reason: "No active subscription" }
     }
 
+    if (this.subscription.status !== "active") {
+      return { allowed: false, reason: `Subscription is ${this.subscription.status}` }
+    }
+
     const plan = this.getPlan()
     if (!plan) {
       return { allowed: false, reason: "Invalid plan" }
     }
 
-    // Check if feature is available and has remaining usage
+    // Special logic for Starter plan interviews: use resume_credits_remaining
+    if (plan.name === "starter" && feature === "interview") {
+      if (this.usage.resume_credits_remaining > 0) {
+        return { allowed: true }
+      } else {
+        return { allowed: false, reason: "No interview credits remaining" }
+      }
+    }
+
+    // For non-usage features, just check if plan has the feature
+    if (feature === "template_access" || feature === "export_pdf") {
+      if (!plan.hasFeature(feature)) {
+        return { allowed: false, reason: `${feature.replace('_', ' ')} is not included in your plan` }
+      }
+      return { allowed: true }
+    }
+
+    // For usage-based features, check remaining usage
     if (!plan.canUseFeature(feature, this.usage)) {
       return { allowed: false, reason: plan.getDepletionMessage(feature) }
     }
@@ -359,7 +442,8 @@ export async function createUserPlan(userId: string, userEmail?: string): Promis
 
   const usage = new Usage(
     usageData?.interviews_used || 0,
-    usageData?.cover_letters_used || 0
+    usageData?.cover_letters_used || 0,
+    usageData?.resume_credits_remaining || 0 // Pass resume_credits_remaining
   )
 
   const isAdmin = userEmail ? isAdminUser(userEmail) : false

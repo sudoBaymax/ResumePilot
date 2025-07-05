@@ -36,6 +36,46 @@ export function SubscriptionManager({ onUpgrade }: SubscriptionManagerProps) {
     if (!user) return
 
     try {
+      // Log payment history for debugging
+      console.log("=== PAYMENT HISTORY DEBUG ===")
+      console.log("User Email:", user.email)
+      console.log("User ID:", user.id)
+      
+      // Fetch payment history from database
+      const response = await fetch("/api/subscription/debug-payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, email: user.email }),
+      })
+      
+      if (response.ok) {
+        const paymentData = await response.json()
+        console.log("Database Payments:", paymentData.payments)
+        console.log("Stripe Payments:", paymentData.stripePayments)
+        
+        // Show detailed Stripe payment info
+        if (paymentData.stripePayments && paymentData.stripePayments.length > 0) {
+          console.log("=== DETAILED STRIPE PAYMENT INFO ===")
+          paymentData.stripePayments.forEach((payment: any, index: number) => {
+            console.log(`Payment ${index + 1}:`, {
+              id: payment.id,
+              amount: payment.amount,
+              currency: payment.currency,
+              status: payment.status,
+              created: payment.created,
+              customer_email: payment.customer_email,
+              customer_id: payment.customer_id,
+              metadata: payment.metadata,
+              type: payment.type || 'payment_intent'
+            })
+          })
+          console.log("=== END DETAILED STRIPE PAYMENT INFO ===")
+        }
+      } else {
+        console.log("Failed to fetch payment history")
+      }
+      console.log("=== END PAYMENT HISTORY DEBUG ===")
+
       const plan = await createUserPlan(user.id, user.email)
       setUserPlan(plan)
     } catch (error) {
@@ -103,6 +143,166 @@ export function SubscriptionManager({ onUpgrade }: SubscriptionManagerProps) {
       toast({
         title: "Error",
         description: "Failed to start upgrade process",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleManualFix = async () => {
+    if (!user) return
+
+    try {
+      const response = await fetch("/api/subscription/manual-fix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, email: user.email }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        toast({
+          title: "Subscription Fixed",
+          description: data.message,
+          variant: "default",
+        })
+        // Refresh the user plan
+        await fetchUserPlan()
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to fix subscription",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error fixing subscription:", error)
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDebugUsage = async () => {
+    if (!user) return
+
+    try {
+      const response = await fetch("/api/subscription/debug-usage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, email: user.email }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        console.log("=== USAGE DEBUG DATA ===")
+        console.log("User Info:", data.userInfo)
+        console.log("Current Month:", data.currentMonth)
+        console.log("Current Month Usage:", data.currentMonthUsage)
+        console.log("All Usage Records:", data.allUsage)
+        console.log("=== END USAGE DEBUG DATA ===")
+        
+        toast({
+          title: "Usage Data Logged",
+          description: "Check browser console for detailed usage information",
+          variant: "default",
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to fetch usage data",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error fetching usage data:", error)
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleResetUsage = async () => {
+    if (!user) return
+
+    try {
+      const response = await fetch("/api/subscription/reset-usage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, email: user.email }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        toast({
+          title: "Usage Reset",
+          description: "Your usage has been reset to 0",
+          variant: "default",
+        })
+        // Refresh the user plan
+        await fetchUserPlan()
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to reset usage",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error resetting usage:", error)
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleSyncPayments = async () => {
+    if (!user) return
+
+    try {
+      const response = await fetch("/api/subscription/sync-payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, email: user.email }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        console.log("=== PAYMENT SYNC RESULTS ===")
+        console.log("User Info:", data.userInfo)
+        console.log("Results:", data.results)
+        console.log("Synced Payments:", data.syncedPayments)
+        console.log("Synced Subscriptions:", data.syncedSubscriptions)
+        console.log("=== END PAYMENT SYNC RESULTS ===")
+        
+        toast({
+          title: "Payments Synced",
+          description: `Synced ${data.results.paymentsSynced} payments and created ${data.results.subscriptionsCreated} subscriptions`,
+          variant: "default",
+        })
+        // Refresh the user plan
+        await fetchUserPlan()
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to sync payments",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error syncing payments:", error)
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
         variant: "destructive",
       })
     }
@@ -182,9 +382,37 @@ export function SubscriptionManager({ onUpgrade }: SubscriptionManagerProps) {
           </CardTitle>
           <CardDescription>You don't have an active subscription. Choose a plan to get started.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <Button onClick={onUpgrade} className="w-full">
             View Plans
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleManualFix} 
+            className="w-full"
+          >
+            Fix Missing Subscription (Debug)
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleDebugUsage} 
+            className="w-full"
+          >
+            Debug Usage Data
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleResetUsage} 
+            className="w-full"
+          >
+            Reset Usage (Debug)
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleSyncPayments} 
+            className="w-full"
+          >
+            Sync Payments (Debug)
           </Button>
         </CardContent>
       </Card>
@@ -255,17 +483,28 @@ export function SubscriptionManager({ onUpgrade }: SubscriptionManagerProps) {
               <div className="flex justify-between text-sm">
                 <span>Voice Interviews</span>
                 <span>
-                  {plan.getUsageMessage("interview", userPlan.usage)}
+                  {/* Starter plan: usage is 1 - resume_credits_remaining out of 1 */}
+                  {plan.name === "starter"
+                    ? `${1 - (userPlan.usage.resume_credits_remaining ?? 0)} / 1`
+                    : plan.getUsageMessage("interview", userPlan.usage)}
                   {plan.limits.interviews === -1 && " (∞)"}
                 </span>
               </div>
               <Progress 
-                value={userPlan.usage.getPercentage("interview", plan.limits.interviews)} 
+                value={plan.name === "starter"
+                  ? (1 - (userPlan.usage.resume_credits_remaining ?? 0)) * 100
+                  : userPlan.usage.getPercentage("interview", plan.limits.interviews)
+                }
                 className="h-2" 
               />
-              {userPlan.isUsageDepleted("interview") && (
-                <p className="text-sm text-red-600">You've used all your interviews this month</p>
-              )}
+              {/* Depletion message for Starter plan */}
+              {plan.name === "starter"
+                ? (userPlan.usage.resume_credits_remaining ?? 0) <= 0 && (
+                    <p className="text-sm text-red-600">You've used all your interviews this month</p>
+                  )
+                : userPlan.isUsageDepleted("interview") && (
+                    <p className="text-sm text-red-600">You've used all your interviews this month</p>
+                  )}
             </div>
           )}
 
@@ -290,7 +529,9 @@ export function SubscriptionManager({ onUpgrade }: SubscriptionManagerProps) {
           )}
 
           {/* Upgrade suggestion */}
-          {userPlan.isUsageDepleted() && (
+          {(plan.name === "starter"
+            ? (userPlan.usage.resume_credits_remaining ?? 0) <= 0
+            : userPlan.isUsageDepleted()) && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-800 mb-2">You've used all your monthly allowances!</p>
               <Button size="sm" onClick={onUpgrade}>
@@ -350,6 +591,37 @@ export function SubscriptionManager({ onUpgrade }: SubscriptionManagerProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Debug Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Debug Tools</CardTitle>
+          <CardDescription>Developer tools for troubleshooting</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Button 
+            variant="outline" 
+            onClick={handleDebugUsage} 
+            className="w-full"
+          >
+            Debug Usage Data
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleSyncPayments} 
+            className="w-full"
+          >
+            Sync Payments
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleResetUsage} 
+            className="w-full"
+          >
+            Reset Usage
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   )
 }
