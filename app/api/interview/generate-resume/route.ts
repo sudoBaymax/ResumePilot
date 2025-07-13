@@ -46,18 +46,18 @@ interface ResumeData {
 
 export async function POST(request: NextRequest) {
   try {
-    // Temporarily remove authentication for testing
-    // const authHeader = request.headers.get("authorization")
-    // if (!authHeader) {
-    //   return NextResponse.json({ error: "No authorization header" }, { status: 401 })
-    // }
 
-    // const token = authHeader.replace("Bearer ", "")
-    // const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    const authHeader = request.headers.get("authorization")
+    if (!authHeader) {
+      return NextResponse.json({ error: "No authorization header" }, { status: 401 })
+    }
 
-    // if (authError || !user) {
-    //   return NextResponse.json({ error: "Invalid token" }, { status: 401 })
-    // }
+    const token = authHeader.replace("Bearer ", "")
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    }
 
     const body = await request.json()
     const { 
@@ -74,6 +74,43 @@ export async function POST(request: NextRequest) {
 
     console.log("Generating resume for role:", roleType)
 
+    async function recordInterviewUsage(userId: string) {
+      const monthYear = new Date().toISOString().slice(0, 7); // "2025-07"
+
+      // 1️  try to fetch this month's row
+      const { data: existing, error: fetchErr } = await supabase
+        .from("usage_tracking")
+        .select("interviews_used")
+        .eq("user_id", userId)
+        .eq("month_year", monthYear)
+        .single();
+
+      if (fetchErr && fetchErr.code !== "PGRST116") {
+        // real error (not "row not found")
+        console.error("Usage fetch error:", fetchErr);
+        return;
+      }
+
+      const newCount = existing ? existing.interviews_used + 1 : 1;
+
+      // 2️  upsert the new count
+      const { error: upsertErr } = await supabase
+        .from("usage_tracking")
+        .upsert(
+          {
+            user_id: userId,
+            month_year: monthYear,
+            interviews_used: newCount,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: ["user_id", "month_year"] }
+        );
+
+      if (upsertErr) {
+        console.error("Usage upsert error:", upsertErr);
+      }
+    }
+
     // Step 1: Extract and structure conversation data
     const structuredData = await extractConversationData(conversation, resumeText, roleType, userInfo)
     
@@ -85,6 +122,8 @@ export async function POST(request: NextRequest) {
     
     // Step 4: Generate different formats
     const results = await generateFormats(processedTemplate, enhancedData, templateName)
+
+    await recordInterviewUsage(user.id);
 
     return NextResponse.json({
       success: true,

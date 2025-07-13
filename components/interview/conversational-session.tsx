@@ -89,11 +89,52 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
       setStep("mode-select")
   }
 
-  const handleModeSelect = (mode: InterviewMode) => {
+  async function checkInterviewAccess() {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  const response = await fetch("/api/interview/check-access", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${session?.access_token}`,
+    },
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.message || `HTTP ${response.status} error`)
+  }
+
+  const data = await response.json()
+  return data.allowed
+}
+
+  const handleModeSelect = async (mode: InterviewMode) => {
+  try {
+    const allowed = await checkInterviewAccess()
+
+    if (!allowed) {
+      toast({
+        title: "Interview Limit Reached",
+        description: "You have reached the limit for starting new interviews. Please try again later.",
+        variant: "destructive",
+      })
+      return // prevent starting interview
+    }
+
     setInterviewMode(mode)
     setStep("interview")
     startConversation()
+  } catch (error) {
+    console.error("Error checking interview access:", error)
+    toast({
+      title: "Access Check Failed",
+      description: "Unable to verify your interview access. Please try again.",
+      variant: "destructive",
+    })
   }
+}
 
   const generatePersonalizedOpener = (resumeText: string): string => {
     if (!resumeText) {
