@@ -8,6 +8,36 @@ import { Button } from "@/components/ui/button"
 import { CheckCircle, XCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
 
+// Function to create user profile if it doesn't exist
+const createUserProfile = async (user: any) => {
+  try {
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!existingProfile) {
+      // Create new profile
+      const { error } = await supabase.from('profiles').insert({
+        user_id: user.id,
+        full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+        email: user.email,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+
+      if (error) {
+        console.error('Error creating profile:', error)
+      } else {
+        console.log('User profile created successfully')
+      }
+    }
+  } catch (error) {
+    console.error('Error in createUserProfile:', error)
+  }
+}
+
 export default function AuthCallback() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -17,18 +47,30 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
+        // Handle OAuth callback
         const { data, error } = await supabase.auth.getSession()
 
         if (error) {
           console.error("Auth callback error:", error)
           setStatus("error")
-          setMessage(error.message || "There was an error verifying your email. Please try again.")
+          setMessage(error.message || "There was an error with authentication. Please try again.")
           return
         }
 
         if (data.session) {
+          // Create user profile if needed
+          await createUserProfile(data.session.user)
+          
           setStatus("success")
-          setMessage("Your email has been verified successfully! Welcome to ResumePilot.")
+          // Check if user came from OAuth or email verification
+          const user = data.session.user
+          const isOAuth = user.app_metadata?.provider === 'github' || user.app_metadata?.provider === 'google'
+          
+          if (isOAuth) {
+            setMessage("Successfully signed in with GitHub! Welcome to ResumePilot.")
+          } else {
+            setMessage("Your email has been verified successfully! Welcome to ResumePilot.")
+          }
 
           // Redirect to dashboard after 3 seconds
           setTimeout(() => {
@@ -36,7 +78,7 @@ export default function AuthCallback() {
           }, 3000)
         } else {
           setStatus("error")
-          setMessage("Unable to verify your email. The link may have expired.")
+          setMessage("Unable to complete authentication. The link may have expired.")
         }
       } catch (err) {
         console.error("Unexpected error:", err)
@@ -58,14 +100,14 @@ export default function AuthCallback() {
             </div>
           </div>
           <CardTitle className="text-2xl">
-            {status === "loading" && "Verifying Your Email..."}
-            {status === "success" && "Email Verified!"}
-            {status === "error" && "Verification Failed"}
+            {status === "loading" && "Completing Authentication..."}
+            {status === "success" && "Authentication Successful!"}
+            {status === "error" && "Authentication Failed"}
           </CardTitle>
           <CardDescription>
-            {status === "loading" && "Please wait while we verify your email address."}
+            {status === "loading" && "Please wait while we complete your authentication."}
             {status === "success" && "You can now access all ResumePilot features."}
-            {status === "error" && "We encountered an issue verifying your email."}
+            {status === "error" && "We encountered an issue with authentication."}
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center space-y-4">
