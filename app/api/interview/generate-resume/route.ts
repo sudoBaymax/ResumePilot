@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase"
 import { OpenAI } from "openai"
 import fs from "fs"
 import path from "path"
+import {incrementUsage} from "@/lib/subscription"
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -124,6 +125,12 @@ export async function POST(request: NextRequest) {
     const results = await generateFormats(processedTemplate, enhancedData, templateName)
 
     await recordInterviewUsage(user.id);
+
+    const usageSuccess = await incrementUsage(user.id, "interview")
+
+    if (!usageSuccess) {
+      return NextResponse.json({error: "Failed to track usage" }, { status: 500 })
+    }
 
     return NextResponse.json({
       success: true,
