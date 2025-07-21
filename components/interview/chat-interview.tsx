@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Send, MessageCircle, Clock, Loader2, User, Bot } from "lucide-react"
+import { Send, MessageCircle, Clock, Loader2, User, Bot, FileText } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface ChatInterviewProps {
@@ -19,6 +19,7 @@ interface ChatInterviewProps {
   conversationId?: string
   turnNumber?: number
   conversation: Array<{ speaker: "ai" | "user"; message: string; timestamp: number }>
+  onResumeUploaded?: (resumeText: string, fileName: string) => void // NEW PROP
 }
 
 export function ChatInterview({
@@ -30,12 +31,17 @@ export function ChatInterview({
   conversationId,
   turnNumber = 1,
   conversation,
+  onResumeUploaded,
 }: ChatInterviewProps) {
   const [inputMessage, setInputMessage] = useState("")
   const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
+
+  // Add file upload state
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const timeRemaining = maxTime - conversationTime
   const isNearTimeLimit = timeRemaining < 120 // 2 minutes remaining
@@ -89,6 +95,48 @@ export function ChatInterview({
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
       handleSubmit(e)
+    }
+  }
+
+  // File upload handler
+  const handleFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setIsUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append("resume", file)
+      const response = await fetch("/api/interview/parse-resume", {
+        method: "POST",
+        body: formData,
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to parse resume")
+      }
+      toast({
+        title: "Resume Uploaded Successfully",
+        description: "We've analyzed your resume and will use it to personalize your interview.",
+      })
+      if (typeof onResumeUploaded === "function") {
+        onResumeUploaded(result.text, file.name)
+      }
+    } catch (error: any) {
+      toast({
+        title: "Upload Failed",
+        description: error.message || "There was an error processing your resume.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  // Trigger file input dialog
+  const handleUploadClick = () => {
+    if (fileInputRef.current && !isUploading && !isProcessing) {
+      fileInputRef.current.value = "" // reset so same file can be picked again
+      fileInputRef.current.click()
     }
   }
 
@@ -182,31 +230,47 @@ export function ChatInterview({
           </div>
         )}
 
-        {/* Input Area */}
-        <div className="border-t p-4">
-          <form onSubmit={handleSubmit} className="flex space-x-2">
-            <Input
-              ref={inputRef}
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder={isProcessing ? "AI is responding..." : "Type your response..."}
-              disabled={isProcessing || timeRemaining < 10}
-              className="flex-1"
-              maxLength={1000}
-            />
-            <Button
-              type="submit"
-              disabled={!inputMessage.trim() || isProcessing || timeRemaining < 10}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            </Button>
-          </form>
-          <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
-            <span>Press Enter to send, Shift+Enter for new line</span>
-            <span>{inputMessage.length}/1000</span>
-          </div>
+        {/* Input Area with file upload */}
+        <form onSubmit={handleSubmit} className="flex space-x-2 items-center p-4 border-t">
+          <Input
+            ref={inputRef}
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder={isProcessing ? "AI is responding..." : "Type your response..."}
+            disabled={isProcessing || timeRemaining < 10}
+            className="flex-1"
+            maxLength={1000}
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.txt"
+            onChange={handleFileInput}
+            className="hidden"
+            disabled={isUploading || isProcessing}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            className="ml-1"
+            disabled={isUploading || isProcessing}
+            title="Upload Resume"
+            onClick={handleUploadClick}
+          >
+            {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+          </Button>
+          <Button
+            type="submit"
+            disabled={!inputMessage.trim() || isProcessing || timeRemaining < 10}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          </Button>
+        </form>
+        <div className="flex justify-between items-center mt-2 text-xs text-gray-500 px-4 pb-2">
+          <span>Press Enter to send, Shift+Enter for new line</span>
+          <span>{inputMessage.length}/1000</span>
         </div>
       </CardContent>
     </Card>

@@ -44,6 +44,30 @@ type InterviewMode = "voice" | "chat" | "resume-analyzer"
 
 const MAX_CONVERSATION_TIME = 900 // 15 minutes in seconds
 
+// Add a helper to extract the most recent experience using OpenAI
+async function extractMostRecentExperienceWithLLM(resumeText: string): Promise<string | null> {
+  try {
+    const response = await fetch("/api/interview/analyze-resume", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        resumeText,
+        question: "Extract the most recent work experience entry (job title, company, dates) from this resume. Respond with only the entry as a single line, or say 'NOT_FOUND' if none."
+      })
+    })
+    const data = await response.json()
+    if (data && data.analysis) {
+      const line = data.analysis.trim().split("\n")[0]
+      if (line && !/^NOT_FOUND/i.test(line)) {
+        return line
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+  return null
+}
+
 export function ConversationalSession({ userId, roleType, onComplete }: ConversationalSessionProps) {
   const { user } = useAuth()
   const { toast } = useToast()
@@ -86,7 +110,11 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
 
   const handleResumeUploaded = (text: string, fileName: string) => {
     setResumeText(text)
-      setStep("mode-select")
+    setStep("mode-select")
+    // If already in interview step, restart conversation with new resume
+    if (step === "interview") {
+      startConversation()
+    }
   }
 
   const handleModeSelect = (mode: InterviewMode) => {
@@ -95,35 +123,22 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
     startConversation()
   }
 
-  const generatePersonalizedOpener = (resumeText: string): string => {
+  // Replace generatePersonalizedOpener with an async version
+  const generatePersonalizedOpener = async (resumeText: string): Promise<string> => {
     if (!resumeText) {
       return `Hi! I'm excited to help you create a compelling resume for ${roleType || "Software Engineer"} roles. Let's start by learning about your background and experience. What's your current role or the position you're targeting?`
     }
-
-    // Extract key information from resume
-    const hasExperience = resumeText.toLowerCase().includes("experience") || resumeText.toLowerCase().includes("work")
-    const hasProjects = resumeText.toLowerCase().includes("project") || resumeText.toLowerCase().includes("github")
-    const hasEducation = resumeText.toLowerCase().includes("education") || resumeText.toLowerCase().includes("degree")
-
-    let opener = `Hi! I can see from your resume that you have a strong background. `
-
-    if (hasExperience) {
-      opener += `I notice you have relevant experience. `
+    const extracted = await extractMostRecentExperienceWithLLM(resumeText)
+    if (extracted) {
+      return `Let's start with your most recent experience: "${extracted}". Can you tell me more about your main achievements, technologies used, and impact?`
     }
-    if (hasProjects) {
-      opener += `You've worked on some interesting projects. `
-    }
-    if (hasEducation) {
-      opener += `Your educational background looks great. `
-    }
-
-    opener += `Let's dive deeper to create compelling XYZ-format bullets that will make your ${roleType || "Software Engineer"} resume stand out. What's the most impactful project or experience you'd like to highlight first?`
-
-    return opener
+    // fallback
+    return `Hi! I can see from your resume that you have a strong background. Let's dive deeper to create compelling XYZ-format bullets that will make your ${roleType || "Software Engineer"} resume stand out. What's the most impactful project or experience you'd like to highlight first?`
   }
 
+  // Update startConversation to use the async opener
   const startConversation = async () => {
-    const opener = generatePersonalizedOpener(resumeText)
+    const opener = await generatePersonalizedOpener(resumeText)
     
     const aiTurn: ConversationTurn = {
         speaker: "ai",
@@ -591,6 +606,13 @@ export function ConversationalSession({ userId, roleType, onComplete }: Conversa
             conversationTime={currentTime}
             maxTime={MAX_CONVERSATION_TIME}
             conversation={conversation}
+            onResumeUploaded={(text, fileName) => {
+              setResumeText(text)
+              toast({
+                title: "Resume Updated",
+                description: `Now using: ${fileName}`,
+              })
+            }}
           />
         ) : (
           <ResumeAnalyzer resumeText={resumeText} />

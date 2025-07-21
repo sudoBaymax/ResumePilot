@@ -94,13 +94,30 @@ export function ResumeDownload({ resumeData, template, downloads, onRegenerate }
       const result = await response.json()
       
       if (result.success && result.pdfUrl) {
-        // Download the PDF
-        const a = document.createElement("a")
-        a.href = result.pdfUrl
-        a.download = result.filename || filename.replace('.tex', '.pdf')
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
+        // Handle base64 data URL
+        if (result.pdfUrl.startsWith('data:')) {
+          // Convert base64 data URL to blob
+          const response = await fetch(result.pdfUrl)
+          const blob = await response.blob()
+          
+          // Create download URL
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement("a")
+          a.href = url
+          a.download = result.filename || filename.replace('.tex', '.pdf')
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          URL.revokeObjectURL(url)
+        } else {
+          // Fallback for direct URL (if any)
+          const a = document.createElement("a")
+          a.href = result.pdfUrl
+          a.download = result.filename || filename.replace('.tex', '.pdf')
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+        }
       } else {
         throw new Error("PDF generation failed")
       }
@@ -143,13 +160,30 @@ export function ResumeDownload({ resumeData, template, downloads, onRegenerate }
       const result = await response.json()
       
       if (result.success && result.wordUrl) {
-        // Download the Word document
-        const a = document.createElement("a")
-        a.href = result.wordUrl
-        a.download = result.filename || filename.replace('.tex', '.html')
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
+        // Handle base64 data URL
+        if (result.wordUrl.startsWith('data:')) {
+          // Convert base64 data URL to blob
+          const response = await fetch(result.wordUrl)
+          const blob = await response.blob()
+          
+          // Create download URL
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement("a")
+          a.href = url
+          a.download = result.filename || filename.replace('.tex', '.html')
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          URL.revokeObjectURL(url)
+        } else {
+          // Fallback for direct URL (if any)
+          const a = document.createElement("a")
+          a.href = result.wordUrl
+          a.download = result.filename || filename.replace('.tex', '.html')
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+        }
       } else {
         throw new Error("Word generation failed")
       }

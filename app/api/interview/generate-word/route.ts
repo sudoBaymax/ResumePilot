@@ -53,20 +53,15 @@ async function generateWordDocument(resumeData: any, filename: string): Promise<
     // Create a simple HTML representation of the resume
     const htmlContent = createResumeHTML(resumeData)
     
-    // Convert HTML to Word document using a simple approach
-    // In production, you might want to use libraries like:
-    // - docx (Node.js library)
-    // - mammoth (HTML to DOCX)
-    // - pandoc (command line tool)
-    
-    const wordBlob = await htmlToWord(htmlContent)
-    const wordUrl = URL.createObjectURL(wordBlob)
+    // Convert HTML content to base64 for transmission
+    // The frontend will handle blob creation and download
+    const base64Content = Buffer.from(htmlContent, 'utf-8').toString('base64')
     
     console.log("Word document generated successfully")
     
     return {
       success: true,
-      wordUrl
+      wordUrl: `data:text/html;base64,${base64Content}`
     }
 
   } catch (error) {
@@ -199,21 +194,4 @@ function createResumeHTML(resumeData: any): string {
 </body>
 </html>
   `
-}
-
-async function htmlToWord(htmlContent: string): Promise<Blob> {
-  try {
-    // For this implementation, we'll create a simple HTML file that can be opened in Word
-    // In production, you'd use a proper HTML to DOCX conversion library
-    
-    // Create a blob with the HTML content
-    const htmlBlob = new Blob([htmlContent], { type: 'text/html' })
-    
-    // For now, return the HTML blob (users can open it in Word)
-    // In a full implementation, you'd convert this to actual DOCX format
-    return htmlBlob
-    
-  } catch (error) {
-    throw new Error(`HTML to Word conversion failed: ${error}`)
-  }
 } 

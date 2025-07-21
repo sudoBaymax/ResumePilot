@@ -87,13 +87,10 @@ async function compileLatexToPDF(latexContent: string, filename: string): Promis
     console.log("LaTeX compilation result:", result)
 
     if (result.status === "success" && result.pdf) {
-      // Convert base64 PDF to blob URL
-      const pdfBlob = base64ToBlob(result.pdf, "application/pdf")
-      const pdfUrl = URL.createObjectURL(pdfBlob)
-      
+      // Return base64 PDF data - frontend will handle blob creation
       return {
         success: true,
-        pdfUrl
+        pdfUrl: `data:application/pdf;base64,${result.pdf}`
       }
     } else {
       console.error("LaTeX compilation failed:", result.error || "Unknown error")
@@ -109,16 +106,4 @@ async function compileLatexToPDF(latexContent: string, filename: string): Promis
       error: `LaTeX compilation failed: ${error instanceof Error ? error.message : "Unknown error"}. Please use the LaTeX file with Overleaf or a local LaTeX compiler.`
     }
   }
-}
-
-function base64ToBlob(base64: string, mimeType: string): Blob {
-  const byteCharacters = atob(base64)
-  const byteNumbers = new Array(byteCharacters.length)
-  
-  for (let i = 0; i < byteCharacters.length; i++) {
-    byteNumbers[i] = byteCharacters.charCodeAt(i)
-  }
-  
-  const byteArray = new Uint8Array(byteNumbers)
-  return new Blob([byteArray], { type: mimeType })
 } 
