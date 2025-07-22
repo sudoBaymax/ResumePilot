@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Mic, Brain, FileText, CheckCircle, Star, Github, Twitter, Mail, Play, Zap, Target } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { ThemeToggle } from "@/components/theme-provider"
 
 export default function LandingPage() {
   const [showAuthModal, setShowAuthModal] = useState(false)
@@ -32,9 +33,9 @@ export default function LandingPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-950 dark:to-gray-800">
       {/* Navigation */}
-      <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+      <nav className="border-b bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
@@ -46,10 +47,10 @@ export default function LandingPage() {
                   style={{ width: "40px", height: "40px", borderRadius: "9px" }}
                 />
               </div>
-              <span className="text-xl font-bold text-gray-900">ResumePilot</span>
+              <span className="text-xl font-bold text-gray-900 dark:text-gray-100">ResumePilot</span>
             </div>
             <div className="hidden md:flex items-center space-x-8">
-              <Link href="#how-it-works" className="text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="#how-it-works" className="text-gray-600 dark:text-gray-100 hover:text-gray-900 dark:hover:text-white transition-colors">
                 How It Works
               </Link>
               <Link href="#demo" className="text-gray-600 hover:text-gray-900 transition-colors">
@@ -61,6 +62,7 @@ export default function LandingPage() {
               <Link href="#faq" className="text-gray-600 hover:text-gray-900 transition-colors">
                 FAQ
               </Link>
+              <ThemeToggle />
               <Button variant="outline" size="sm" onClick={() => setShowAuthModal(true)}>
                 Sign In
               </Button>
@@ -72,77 +74,72 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="relative overflow-hidden py-20 lg:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
-              <div className="space-y-4">
-                <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100">
-                  <Zap className="w-3 h-3 mr-1" />
-                  AI-Powered Resume Builder
-                </Badge>
-                <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 leading-tight">
-                  Let Your Voice Build the{" "}
-                  <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    Resume
-                  </span>
-                </h1>
-                <p className="text-xl text-gray-600 leading-relaxed">
-                  ResumePilot uses voice interviews and AI to craft tailored, ATS-optimized resumes with STAR and XYZ
-                  format bullets for software engineers.
-                </p>
+          <div className="flex flex-col items-center">
+            <div className="space-y-4 text-center w-full">
+              <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100 mx-auto">
+                <Zap className="w-3 h-3 mr-1" />
+                AI-Powered Resume Builder
+              </Badge>
+              <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 dark:text-gray-100 leading-tight">
+                Let Your Voice Build the{" "}
+                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  Resume
+                </span>
+              </h1>
+              <p className="text-xl text-gray-600 dark:text-gray-300 leading-relaxed text-center max-w-2xl mx-auto">
+                ResumePilot uses voice interviews and AI to craft tailored, ATS-optimized resumes with STAR and XYZ
+                format bullets for software engineers.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
+              <Button
+                size="lg"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white dark:text-white"
+                onClick={() => (user ? (window.location.href = "/dashboard") : setShowAuthModal(true))}
+              >
+                <Play className="w-4 h-4 mr-2 text-white" />
+                {user ? "Go to Dashboard" : "Try the Demo"}
+              </Button>
+              <Button variant="outline" size="lg">
+                How It Works
+              </Button>
+            </div>
+            <div className="flex items-center space-x-6 text-sm text-gray-500 justify-center mt-6">
+              <div className="flex items-center space-x-1">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+                <span>ATS-Optimized</span>
               </div>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button
-                  size="lg"
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                  onClick={() => (user ? (window.location.href = "/dashboard") : setShowAuthModal(true))}
-                >
-                  <Play className="w-4 h-4 mr-2" />
-                  {user ? "Go to Dashboard" : "Try the Demo"}
-                </Button>
-                <Button variant="outline" size="lg">
-                  How It Works
-                </Button>
+              <div className="flex items-center space-x-1">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+                <span>STAR & XYZ Format</span>
               </div>
-              <div className="flex items-center space-x-6 text-sm text-gray-500">
-                <div className="flex items-center space-x-1">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span>ATS-Optimized</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span>STAR & XYZ Format</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span>SWE Focused</span>
-                </div>
+              <div className="flex items-center space-x-1">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+                <span>SWE Focused</span>
               </div>
             </div>
-            <div className="relative">
-              <div className="bg-white rounded-2xl shadow-2xl p-6 border">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">Resume Preview</h3>
-                    <Badge variant="secondary">Live Demo</Badge>
-                  </div>
-                  <img
-                    src="/placeholder.svg?height=400&width=300"
-                    alt="Resume mockup"
-                    className="w-full rounded-lg border"
-                  />
-                  <div className="flex items-center justify-center space-x-2 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
-                    <div className="flex space-x-1">
-                      {[...Array(4)].map((_, i) => (
-                        <div
-                          key={i}
-                          className="w-2 h-8 bg-gradient-to-t from-blue-400 to-purple-400 rounded-full animate-pulse"
-                          style={{ animationDelay: `${i * 0.1}s` }}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-sm text-gray-600 ml-2">Voice interview in progress...</span>
-                  </div>
-                </div>
+            {/* Large autoplaying video below all hero content */}
+            <div className="relative w-full flex justify-center mt-10 mb-8">
+              <div className="relative w-full max-w-3xl">
+                <video
+                  src="/videos/DEMO1.mp4"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full rounded-2xl shadow-2xl border"
+                  style={{ objectFit: 'cover', maxHeight: '420px' }}
+                  aria-label="ResumePilot Demo Video"
+                >
+                  Your browser does not support the video tag.
+                </video>
+                {/* Gradient overlay at the bottom of the video */}
+                <div
+                  className="pointer-events-none absolute left-0 right-0 bottom-0 h-20 rounded-b-2xl"
+                  style={{
+                    background: 'linear-gradient(to top, rgba(255,255,255,0.45) 60%, rgba(255,255,255,0) 100%)',
+                  }}
+                />
               </div>
             </div>
           </div>
@@ -150,48 +147,70 @@ export default function LandingPage() {
       </section>
 
       {/* Problem Section */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-white dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">The Resume Problem Engineers Actually Face</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100">The Resume Problem Engineers Actually Face</h2>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-10">
             {[
               {
                 icon: Target,
                 title: "Design Over Substance",
                 description: "Most resume builders focus on design, not substance.",
+                color: "from-red-400 to-red-600",
+                badge: "01",
               },
               {
                 icon: Brain,
                 title: "Generic AI Tools",
                 description: "AI tools don't ask the right questions or know your projects.",
+                color: "from-red-400 to-red-600",
+                badge: "02",
               },
               {
                 icon: FileText,
                 title: "Generic Results",
                 description: "You end up with generic bullets that don't reflect your skills.",
+                color: "from-red-400 to-red-600",
+                badge: "03",
               },
             ].map((problem, index) => (
-              <Card key={index} className="border-2 border-red-100 bg-red-50/50">
-                <CardContent className="p-6 text-center space-y-4">
-                  <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mx-auto">
-                    <problem.icon className="w-6 h-6 text-red-600" />
-                  </div>
-                  <h3 className="font-semibold text-gray-900">{problem.title}</h3>
-                  <p className="text-gray-600">{problem.description}</p>
-                </CardContent>
-              </Card>
+              <div
+                key={index}
+                className="relative group bg-white/70 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 p-8 flex flex-col items-center transition-transform duration-200 hover:-translate-y-2 hover:shadow-2xl"
+                style={{ minHeight: 320 }}
+              >
+                {/* Numbered badge */}
+                <span className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-gray-900 to-gray-700 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg tracking-widest">
+                  {problem.badge}
+                </span>
+                {/* Icon in gradient/glass circle */}
+                <div
+                  className={`mb-6 w-16 h-16 flex items-center justify-center rounded-full bg-gradient-to-br ${problem.color} shadow-lg group-hover:scale-110 transition-transform duration-200`}
+                  style={{ backdropFilter: 'blur(6px)' }}
+                >
+                  <problem.icon className="w-8 h-8 text-white drop-shadow" />
+                </div>
+                {/* Title */}
+                <h3 className="font-extrabold text-lg text-gray-900 dark:text-gray-100 mb-2 text-center tracking-tight">
+                  {problem.title}
+                </h3>
+                {/* Description */}
+                <p className="text-gray-600 dark:text-gray-300 text-base text-center leading-relaxed">
+                  {problem.description}
+                </p>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
       {/* Solution Section */}
-      <section id="how-it-works" className="py-20 bg-gradient-to-br from-blue-50 to-purple-50">
+      <section id="how-it-works" className="py-20 bg-gradient-to-br from-blue-50 to-purple-50 dark:bg-gradient-to-br dark:from-blue-950 dark:to-purple-950">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">How ResumePilot Works</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100">How ResumePilot Works</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {[
@@ -217,7 +236,7 @@ export default function LandingPage() {
                 color: "green",
               },
             ].map((step, index) => (
-              <Card key={index} className="border-0 shadow-lg bg-white">
+              <Card key={index} className="border-0 shadow-lg bg-white dark:bg-gray-900">
                 <CardContent className="p-8 text-center space-y-6">
                   <div className="relative">
                     <div
@@ -231,12 +250,14 @@ export default function LandingPage() {
                     >
                       <step.icon className="w-8 h-8 text-white" />
                     </div>
-                    <Badge variant="secondary" className="absolute -top-2 -right-2 bg-white border-2 border-gray-100">
+                    <Badge variant="secondary" className="absolute -top-2 -right-2 bg-white border-2 border-gray-100 dark:bg-gray-900 dark:text-white dark:border-gray-700">
                       {step.step}
                     </Badge>
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900">{step.title}</h3>
-                  <p className="text-gray-600">{step.description}</p>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{step.title}</h3>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    {step.description}
+                  </p>
                 </CardContent>
               </Card>
             ))}
@@ -245,12 +266,12 @@ export default function LandingPage() {
       </section>
 
       {/* Product Demo Section */}
-      <section id="demo" className="py-20 bg-white">
+      <section id="demo" className="py-20 bg-white dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">See It in Action</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100">See It in Action</h2>
           </div>
-          <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl p-8 text-white">
+          <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl p-8 text-white dark:from-gray-950 dark:to-gray-900">
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div className="space-y-6">
                 <div className="space-y-4">
@@ -259,7 +280,7 @@ export default function LandingPage() {
                     Voice Interview
                   </Badge>
                   <h3 className="text-2xl font-bold">Interactive Demo</h3>
-                  <p className="text-gray-300">
+                  <p className="text-gray-300 dark:text-gray-200">
                     Experience how our AI conducts a real interview and generates professional resume content.
                   </p>
                 </div>
@@ -273,20 +294,23 @@ export default function LandingPage() {
                 </Button>
               </div>
               <div className="relative">
-                <img
-                  src="/placeholder.svg?height=300&width=400"
-                  alt="Demo interface"
-                  className="w-full rounded-lg border border-gray-700"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/50 to-transparent rounded-lg" />
-                <div className="absolute bottom-4 left-4 right-4">
-                  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                      <span className="text-sm">Recording: "Tell me about your most challenging project..."</span>
-                    </div>
-                  </div>
+                {/* Replace placeholder image with DEMO1.mp4 video */}
+                <div className="relative w-full flex justify-center">
+                  <video
+                    src="/videos/DEMO1.mp4"
+                    controls
+                    playsInline
+                    className="w-full max-w-7xl rounded-2xl border border-gray-700 shadow-xl"
+                    style={{ maxHeight: '900px', objectFit: 'cover' }}
+                    aria-label="ResumePilot Demo Video"
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                  {/* Optional: If you want a subtle gradient, place it only at the bottom and pointer-events-none */}
+                  <div className="pointer-events-none absolute left-0 right-0 bottom-0 h-16 rounded-b-2xl" style={{background: 'linear-gradient(to top, rgba(255,255,255,0.25) 60%, rgba(255,255,255,0) 100%)'}} />
                 </div>
+                {/* <div className="absolute inset-0 bg-gradient-to-t from-gray-900/50 to-transparent rounded-lg" /> */}
+
               </div>
             </div>
           </div>
@@ -294,10 +318,10 @@ export default function LandingPage() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-20 bg-gradient-to-br from-blue-50 to-purple-50">
+      <section className="py-20 bg-gradient-to-br from-blue-50 to-purple-50 dark:bg-gradient-to-br dark:from-blue-950 dark:to-purple-950">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">Loved by Engineers</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100">Loved by Engineers</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {[
@@ -326,17 +350,17 @@ export default function LandingPage() {
                 rating: 5,
               },
             ].map((testimonial, index) => (
-              <Card key={index} className="border-0 shadow-lg bg-white">
+              <Card key={index} className="border-0 shadow-lg bg-white dark:bg-gray-900">
                 <CardContent className="p-6 space-y-4">
                   <div className="flex space-x-1">
                     {[...Array(testimonial.rating)].map((_, i) => (
                       <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                     ))}
                   </div>
-                  <p className="text-gray-600 italic">"{testimonial.quote}"</p>
+                  <p className="text-gray-600 dark:text-gray-300 italic">"{testimonial.quote}"</p>
                   <div className="space-y-1">
-                    <p className="font-semibold text-gray-900">{testimonial.name}</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="font-semibold text-gray-900 dark:text-gray-100">{testimonial.name}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-300">
                       {testimonial.role} at {testimonial.company}
                     </p>
                   </div>
@@ -348,11 +372,11 @@ export default function LandingPage() {
       </section>
 
       {/* Waitlist Section */}
-      <section id="waitlist" className="py-20 bg-white">
+      <section id="waitlist" className="py-20 bg-white dark:bg-gray-900">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">Join the Waitlist</h2>
-            <p className="text-xl text-gray-600">Be the first to experience ResumePilot when we launch</p>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100">Join the Waitlist</h2>
+            <p className="text-xl text-gray-600 dark:text-gray-300">Be the first to experience ResumePilot when we launch</p>
           </div>
           <div className="flex justify-center">
             <WaitlistForm />
@@ -361,10 +385,10 @@ export default function LandingPage() {
       </section>
 
       {/* FAQ Section */}
-      <section id="faq" className="py-20 bg-gray-50">
+      <section id="faq" className="py-20 bg-gray-50 dark:bg-gradient-to-br dark:from-blue-950 dark:to-purple-950">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">Frequently Asked Questions</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100">Frequently Asked Questions</h2>
           </div>
           <div className="grid md:grid-cols-2 gap-8">
             {[
@@ -384,9 +408,9 @@ export default function LandingPage() {
                   "We generate resume bullets in both STAR (Situation, Task, Action, Result) and XYZ (Accomplished X as measured by Y by doing Z) formats. Our AI automatically chooses the best format based on your specific experience and the type of achievement you're describing.",
               },
             ].map((faq, index) => (
-              <div key={index} className="bg-white rounded-lg shadow-md p-6">
-                <h3 className="font-semibold text-gray-900">{faq.question}</h3>
-                <p className="text-gray-600 mt-2">{faq.answer}</p>
+              <div key={index} className="bg-white rounded-lg shadow-md p-6 dark:bg-gray-900">
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100">{faq.question}</h3>
+                <p className="text-gray-600 dark:text-gray-300 mt-2">{faq.answer}</p>
               </div>
             ))}
           </div>
@@ -394,7 +418,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
+      <footer className="bg-gray-900 dark:bg-gray-950 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8">
             <div className="space-y-4">
@@ -407,9 +431,9 @@ export default function LandingPage() {
                     style={{ width: "40px", height: "40px", borderRadius: "9px" }}
                   />
                 </div>
-                <span className="text-xl font-bold">ResumePilot</span>
+                <span className="text-xl font-bold text-gray-900 dark:text-gray-100">ResumePilot</span>
               </div>
-              <p className="text-gray-400 text-sm">
+              <p className="text-gray-400 dark:text-gray-300 text-sm">
                 AI-powered resume builder that helps software engineers craft compelling, ATS-optimized resumes through
                 voice interviews.
               </p>
@@ -457,7 +481,7 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
+          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400 dark:text-gray-300">
             <p>&copy; 2024 ResumePilot. All rights reserved.</p>
           </div>
         </div>
