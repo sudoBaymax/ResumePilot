@@ -60,7 +60,8 @@ export const ADMIN_EMAILS = [
   "support@resumepilot.ca",
   "info@resumepilot.ca",
   "gurvir899@outlook.com",
-  "dabossphenologix@gmail.com"
+  "dabossphenologix@gmail.com",
+  "stevia1105@hotmail.com"
 ]
 
 // Plan limits matching the pricing page exactly

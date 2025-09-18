@@ -11,12 +11,14 @@ import { Mic, Brain, FileText, CheckCircle, Star, Github, Twitter, Mail, Play, Z
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ThemeToggle } from "@/components/theme-provider"
+import { useRef } from "react"
 
 export default function LandingPage() {
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showWaitlist, setShowWaitlist] = useState(false)
   const { user, loading } = useAuth()
   const router = useRouter()
+  const heroVideoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
     if (!loading && user) {
@@ -29,6 +31,38 @@ export default function LandingPage() {
     const searchParams = new URLSearchParams(window.location.search)
     if (searchParams.has("signin") || searchParams.has("signup")) {
       setShowAuthModal(true)
+    }
+  }, [])
+
+  // Loop video from 40s to end
+  useEffect(() => {
+    const video = heroVideoRef.current
+    if (!video) return
+    const handleTimeUpdate = () => {
+      if (video.currentTime < 40) {
+        video.currentTime = 40
+      }
+    }
+    const handleLoadedMetadata = () => {
+      if (video.currentTime < 40) {
+        video.currentTime = 40
+      }
+    }
+    const handleEnded = () => {
+      video.currentTime = 40
+      video.play()
+    }
+    video.addEventListener('timeupdate', handleTimeUpdate)
+    video.addEventListener('loadedmetadata', handleLoadedMetadata)
+    video.addEventListener('ended', handleEnded)
+    // Set start time if already loaded
+    if (video.readyState >= 1 && video.currentTime < 40) {
+      video.currentTime = 40
+    }
+    return () => {
+      video.removeEventListener('timeupdate', handleTimeUpdate)
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata)
+      video.removeEventListener('ended', handleEnded)
     }
   }, [])
 
@@ -58,6 +92,9 @@ export default function LandingPage() {
               </Link>
               <Link href="/pricing" className="text-gray-600 hover:text-gray-900 transition-colors">
                 Pricing
+              </Link>
+              <Link href="/affiliate" className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors font-semibold">
+                Affiliate
               </Link>
               <Link href="#faq" className="text-gray-600 hover:text-gray-900 transition-colors">
                 FAQ
@@ -124,12 +161,12 @@ export default function LandingPage() {
                 <video
                   src="/videos/DEMO1.mp4"
                   autoPlay
-                  loop
                   muted
                   playsInline
                   className="w-full rounded-2xl shadow-2xl border"
                   style={{ objectFit: 'cover', maxHeight: '420px' }}
                   aria-label="ResumePilot Demo Video"
+                  ref={heroVideoRef}
                 >
                   Your browser does not support the video tag.
                 </video>
@@ -207,63 +244,74 @@ export default function LandingPage() {
       </section>
 
       {/* Solution Section */}
-      <section id="how-it-works" className="py-20 bg-gradient-to-br from-blue-50 to-purple-50 dark:bg-gradient-to-br dark:from-blue-950 dark:to-purple-950">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100">How ResumePilot Works</h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                step: "Step 1",
-                icon: Mic,
-                title: "We Interview You",
-                description: "AI voice assistant asks deep, recruiter-style questions.",
-                color: "blue",
-              },
-              {
-                step: "Step 2",
-                icon: Brain,
-                title: "Context is Parsed",
-                description: "Extract tech stack, impact, and ownership from answers.",
-                color: "purple",
-              },
-              {
-                step: "Step 3",
-                icon: FileText,
-                title: "Bullet Points Are Generated",
-                description: "STAR and XYZ format results tailored for SWE roles.",
-                color: "green",
-              },
-            ].map((step, index) => (
-              <Card key={index} className="border-0 shadow-lg bg-white dark:bg-gray-900">
-                <CardContent className="p-8 text-center space-y-6">
-                  <div className="relative">
-                    <div
-                      className={`w-16 h-16 bg-gradient-to-r ${
-                        step.color === "blue"
-                          ? "from-blue-500 to-blue-600"
-                          : step.color === "purple"
-                            ? "from-purple-500 to-purple-600"
-                            : "from-green-500 to-green-600"
-                      } rounded-xl flex items-center justify-center mx-auto`}
-                    >
-                      <step.icon className="w-8 h-8 text-white" />
+      <div className="relative">
+        <section id="how-it-works" className="py-20 bg-gradient-to-br from-blue-50 to-purple-50 dark:bg-gradient-to-br dark:from-blue-950 dark:to-purple-950">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center space-y-4 mb-16">
+              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100">How ResumePilot Works</h2>
+            </div>
+            <div className="grid md:grid-cols-3 gap-8">
+              {[
+                {
+                  step: "Step 1",
+                  icon: Mic,
+                  title: "We Interview You",
+                  description: "AI voice assistant asks deep, recruiter-style questions.",
+                  color: "blue",
+                },
+                {
+                  step: "Step 2",
+                  icon: Brain,
+                  title: "Context is Parsed",
+                  description: "Extract tech stack, impact, and ownership from answers.",
+                  color: "purple",
+                },
+                {
+                  step: "Step 3",
+                  icon: FileText,
+                  title: "Bullet Points Are Generated",
+                  description: "STAR and XYZ format results tailored for SWE roles.",
+                  color: "green",
+                },
+              ].map((step, index) => (
+                <Card key={index} className="border-0 shadow-lg bg-white dark:bg-gray-900">
+                  <CardContent className="p-8 text-center space-y-6">
+                    <div className="relative">
+                      <div
+                        className={`w-16 h-16 bg-gradient-to-r ${
+                          step.color === "blue"
+                            ? "from-blue-500 to-blue-600"
+                            : step.color === "purple"
+                              ? "from-purple-500 to-purple-600"
+                              : "from-green-500 to-green-600"
+                        } rounded-xl flex items-center justify-center mx-auto`}
+                      >
+                        <step.icon className="w-8 h-8 text-white" />
+                      </div>
+                      <Badge variant="secondary" className="absolute -top-2 -right-2 bg-white border-2 border-gray-100 dark:bg-gray-900 dark:text-white dark:border-gray-700">
+                        {step.step}
+                      </Badge>
                     </div>
-                    <Badge variant="secondary" className="absolute -top-2 -right-2 bg-white border-2 border-gray-100 dark:bg-gray-900 dark:text-white dark:border-gray-700">
-                      {step.step}
-                    </Badge>
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{step.title}</h3>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    {step.description}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{step.title}</h3>
+                    <p className="text-gray-600 dark:text-gray-300">
+                      {step.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+        <div
+          className="pointer-events-none absolute inset-0 z-0 hidden dark:block"
+          style={{
+            backgroundImage:
+              "url('data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'100%\\' height=\\'100%\\'><filter id=\\'noise\\'><feTurbulence type=\\'fractalNoise\\' baseFrequency=\\'1.5\\' numOctaves=\\'6\\' stitchTiles=\\'stitch\\'/></filter><rect width=\\'100%\\' height=\\'100%\\' filter=\\'url(%23noise)\\' opacity=\\'0.18\\'/></svg>')",
+            opacity: 0.18,
+            mixBlendMode: 'overlay',
+          }}
+        />
+      </div>
 
       {/* Product Demo Section */}
       <section id="demo" className="py-20 bg-white dark:bg-gray-900">
@@ -318,58 +366,69 @@ export default function LandingPage() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-20 bg-gradient-to-br from-blue-50 to-purple-50 dark:bg-gradient-to-br dark:from-blue-950 dark:to-purple-950">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100">Loved by Engineers</h2>
+      <div className="relative">
+        <section className="py-20 bg-gradient-to-br from-blue-50 to-purple-50 dark:bg-gradient-to-br dark:from-blue-950 dark:to-purple-950">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center space-y-4 mb-16">
+              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100">Loved by Engineers</h2>
+            </div>
+            <div className="grid md:grid-cols-3 gap-8">
+              {[
+                {
+                  name: "Sarah C.",
+                  role: "Software Engineer",
+                  company: "Spotify",
+                  quote:
+                    "This finally captured what I actually built at my first job. The AI understood the technical complexity better than I could explain it myself.",
+                  rating: 5,
+                },
+                {
+                  name: "Marcus R.",
+                  role: "Frontend Developer",
+                  company: "Shopify",
+                  quote:
+                    "I've tried every resume builder out there. ResumePilot is the first one that actually gets what developers do day-to-day. The STAR and XYZ format bullets perfectly captured my impact.",
+                  rating: 5,
+                },
+                {
+                  name: "Emily Z.",
+                  role: "Full Stack Developer",
+                  company: "Stripe",
+                  quote:
+                    "The voice interview felt natural and the questions were spot-on. My resume now actually reflects my development work properly.",
+                  rating: 5,
+                },
+              ].map((testimonial, index) => (
+                <Card key={index} className="border-0 shadow-lg bg-white dark:bg-gray-900">
+                  <CardContent className="p-6 space-y-4">
+                    <div className="flex space-x-1">
+                      {[...Array(testimonial.rating)].map((_, i) => (
+                        <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                      ))}
+                    </div>
+                    <p className="text-gray-600 dark:text-gray-300 italic">"{testimonial.quote}"</p>
+                    <div className="space-y-1">
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{testimonial.name}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-300">
+                        {testimonial.role} at {testimonial.company}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                name: "Sarah C.",
-                role: "Software Engineer",
-                company: "Spotify",
-                quote:
-                  "This finally captured what I actually built at my first job. The AI understood the technical complexity better than I could explain it myself.",
-                rating: 5,
-              },
-              {
-                name: "Marcus R.",
-                role: "Frontend Developer",
-                company: "Shopify",
-                quote:
-                  "I've tried every resume builder out there. ResumePilot is the first one that actually gets what developers do day-to-day. The STAR and XYZ format bullets perfectly captured my impact.",
-                rating: 5,
-              },
-              {
-                name: "Emily Z.",
-                role: "Full Stack Developer",
-                company: "Stripe",
-                quote:
-                  "The voice interview felt natural and the questions were spot-on. My resume now actually reflects my development work properly.",
-                rating: 5,
-              },
-            ].map((testimonial, index) => (
-              <Card key={index} className="border-0 shadow-lg bg-white dark:bg-gray-900">
-                <CardContent className="p-6 space-y-4">
-                  <div className="flex space-x-1">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    ))}
-                  </div>
-                  <p className="text-gray-600 dark:text-gray-300 italic">"{testimonial.quote}"</p>
-                  <div className="space-y-1">
-                    <p className="font-semibold text-gray-900 dark:text-gray-100">{testimonial.name}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-300">
-                      {testimonial.role} at {testimonial.company}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+        <div
+          className="pointer-events-none absolute inset-0 z-0 hidden dark:block"
+          style={{
+            backgroundImage:
+              "url('data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'100%\\' height=\\'100%\\'><filter id=\\'noise\\'><feTurbulence type=\\'fractalNoise\\' baseFrequency=\\'1.5\\' numOctaves=\\'6\\' stitchTiles=\\'stitch\\'/></filter><rect width=\\'100%\\' height=\\'100%\\' filter=\\'url(%23noise)\\' opacity=\\'0.18\\'/></svg>')",
+            opacity: 0.18,
+            mixBlendMode: 'overlay',
+          }}
+        />
+      </div>
 
       {/* Waitlist Section */}
       <section id="waitlist" className="py-20 bg-white dark:bg-gray-900">
@@ -385,37 +444,48 @@ export default function LandingPage() {
       </section>
 
       {/* FAQ Section */}
-      <section id="faq" className="py-20 bg-gray-50 dark:bg-gradient-to-br dark:from-blue-950 dark:to-purple-950">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100">Frequently Asked Questions</h2>
+      <div className="relative">
+        <section id="faq" className="py-20 bg-gray-50 dark:bg-gradient-to-br dark:from-blue-950 dark:to-purple-950">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center space-y-4 mb-16">
+              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100">Frequently Asked Questions</h2>
+            </div>
+            <div className="grid md:grid-cols-2 gap-8">
+              {[
+                {
+                  question: "How does the voice interview work?",
+                  answer:
+                    "Our AI voice assistant guides you through a structured interview, asking questions about your experience, projects, and skills.",
+                },
+                {
+                  question: "Is my data secure?",
+                  answer:
+                    "Yes, we use industry-standard security measures to protect your data. Your information is encrypted and stored securely.",
+                },
+                {
+                  question: "What format do you use for resume bullets?",
+                  answer:
+                    "We generate resume bullets in both STAR (Situation, Task, Action, Result) and XYZ (Accomplished X as measured by Y by doing Z) formats. Our AI automatically chooses the best format based on your specific experience and the type of achievement you're describing.",
+                },
+              ].map((faq, index) => (
+                <div key={index} className="bg-white rounded-lg shadow-md p-6 dark:bg-gray-900">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">{faq.question}</h3>
+                  <p className="text-gray-600 dark:text-gray-300 mt-2">{faq.answer}</p>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="grid md:grid-cols-2 gap-8">
-            {[
-              {
-                question: "How does the voice interview work?",
-                answer:
-                  "Our AI voice assistant guides you through a structured interview, asking questions about your experience, projects, and skills.",
-              },
-              {
-                question: "Is my data secure?",
-                answer:
-                  "Yes, we use industry-standard security measures to protect your data. Your information is encrypted and stored securely.",
-              },
-              {
-                question: "What format do you use for resume bullets?",
-                answer:
-                  "We generate resume bullets in both STAR (Situation, Task, Action, Result) and XYZ (Accomplished X as measured by Y by doing Z) formats. Our AI automatically chooses the best format based on your specific experience and the type of achievement you're describing.",
-              },
-            ].map((faq, index) => (
-              <div key={index} className="bg-white rounded-lg shadow-md p-6 dark:bg-gray-900">
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">{faq.question}</h3>
-                <p className="text-gray-600 dark:text-gray-300 mt-2">{faq.answer}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+        <div
+          className="pointer-events-none absolute inset-0 z-0 hidden dark:block"
+          style={{
+            backgroundImage:
+              "url('data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'100%\\' height=\\'100%\\'><filter id=\\'noise\\'><feTurbulence type=\\'fractalNoise\\' baseFrequency=\\'1.5\\' numOctaves=\\'6\\' stitchTiles=\\'stitch\\'/></filter><rect width=\\'100%\\' height=\\'100%\\' filter=\\'url(%23noise)\\' opacity=\\'0.18\\'/></svg>')",
+            opacity: 0.18,
+            mixBlendMode: 'overlay',
+          }}
+        />
+      </div>
 
       {/* Footer */}
       <footer className="bg-gray-900 dark:bg-gray-950 text-white py-12">
@@ -449,6 +519,9 @@ export default function LandingPage() {
                 </Link>
                 <Link href="#" className="block text-gray-400 hover:text-white transition-colors">
                   Pricing
+                </Link>
+                <Link href="/affiliate" className="block text-blue-400 hover:text-white transition-colors font-semibold">
+                  Affiliate
                 </Link>
               </div>
             </div>

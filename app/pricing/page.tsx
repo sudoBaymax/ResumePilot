@@ -25,114 +25,114 @@ import { useAuth } from "@/components/auth/auth-provider"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
+import { ThemeToggle } from "@/components/theme-provider"
 
+// 1. Update plan data to match new requirements
 const pricingPlans = [
   {
     id: "starter",
-    name: "Starter",
+    name: "Starter (One-Time Payment)",
     icon: Zap,
-    tagline: "Try ResumePilot once. No strings attached.",
+    tagline: "One-time access, no renewal",
     price: 9,
-    originalPrice: null,
-    period: "one-time",
-    yearlyPrice: null,
-    yearlyOriginal: null,
-    description: "Perfect for a quick application or testing the platform",
+    monthly: 9,
+    yearly: 9,
+    monthlyEquivalent: 9,
+    billingNote: "One-time payment",
+    description: "3 AI Interview Attempts. Access to all question types.",
     features: [
-      "1 voice interview session",
-      "1 resume template (Jake's Template)",
-      "STAR & XYZ bullet formatting",
-      "Basic ATS optimization",
-      "PDF export",
+      "3 AI Interview Attempts",
+      "Access to all question types",
+      "One-time access, no renewal"
     ],
-    limitations: ["No subscription. No auto-renew."],
     cta: "Try It For $9",
-    popular: false,
-    color: "gray",
     highlight: false,
+    color: "gray",
+    period: "one-time",
+    featureMap: [3, true, false, false, false, false, false, false, false, false],
   },
   {
     id: "pro",
     name: "Pro",
     icon: Star,
-    tagline: "Best value for serious job seekers",
-    price: 39,
-    originalPrice: 59,
-    period: "month",
-    yearlyPrice: 299,
-    yearlyOriginal: 468,
-    description: "Everything you need to land your dream job",
+    tagline: "Great for frequent practice & solo job-seekers",
+    price: 49,
+    monthly: 49,
+    yearly: 349,
+    monthlyEquivalent: 29,
+    billingNote: "Billed yearly",
+    description: "30 AI Interview Attempts/month. Model answers & feedback. Analytics dashboard.",
     features: [
-      "10 voice interviews/month",
-      "All 8+ premium templates",
-      "Unlimited resume versions",
-      "STAR & XYZ formatting",
-      "Advanced ATS optimization",
-      "LinkedIn + PDF export",
-      "Resume analytics",
-      "Interview question bank",
-      "Priority email support",
-      "Custom bullet point editing",
+      "30 AI Interview Attempts/month",
+      "Model answers & feedback",
+      "Analytics dashboard"
     ],
-    limitations: [],
     cta: "Start Building",
-    popular: true,
-    color: "blue",
     highlight: true,
+    color: "blue",
+    period: "month",
+    featureMap: [30, true, true, true, false, false, true, false, false, false],
   },
   {
     id: "career",
     name: "Career+",
     icon: Briefcase,
-    tagline: "For active job switchers",
-    price: 59,
-    originalPrice: null,
-    period: "month",
-    yearlyPrice: 449,
-    yearlyOriginal: 708,
-    description: "Apply smarter with tailored bullets for each job",
+    tagline: "Designed for active job-hunters & career switchers",
+    price: 69,
+    monthly: 69,
+    yearly: 499,
+    monthlyEquivalent: 41.5,
+    billingNote: "Billed yearly",
+    description: "100 AI Interview Attempts/month. Career insights dashboard. Resume/LinkedIn help. Custom interview sets.",
     features: [
-      "Everything in Pro, plus:",
-      "30 voice interviews/month",
-      "3 AI-generated cover letters/month",
-      "Role-matching: Upload job link for tailored bullets",
-      "1 live resume review by AI coach (monthly)",
-      "Downloadable Interview Tracker sheet",
-      "Resume version control for different roles",
+      "100 AI Interview Attempts/month",
+      "Career insights dashboard",
+      "Resume/LinkedIn help",
+      "Custom interview sets"
     ],
-    limitations: [],
     cta: "Upgrade to Career+",
-    popular: false,
-    color: "green",
     highlight: false,
+    color: "green",
+    period: "month",
+    featureMap: [100, true, true, true, true, true, true, true, true, false],
   },
   {
     id: "coach",
-    name: "Coach / Agency",
+    name: "Coach",
     icon: Users,
-    tagline: "For resume businesses or freelancers",
+    tagline: "Designed for professionals and institutions",
     price: 129,
-    originalPrice: null,
-    period: "month",
-    yearlyPrice: 999,
-    yearlyOriginal: 1548,
-    description: "Professional tools for resume consultants and agencies",
+    monthly: 129,
+    yearly: 999,
+    monthlyEquivalent: 83,
+    billingNote: "Billed yearly (starts at)",
+    description: "Unlimited interviews. 1:1 career coaching. Org/team account features. Resume feedback & portfolio reviews.",
     features: [
-      "Everything in Career+, plus:",
-      "Up to 5 sub-accounts (clients/team)",
-      "Whitelabel export (no ResumePilot branding)",
-      "Client dashboard",
-      "API access (beta)",
-      "Custom branding & templates",
-      "Dedicated account manager",
-      "Phone support",
+      "Unlimited interviews",
+      "1:1 career coaching",
+      "Org/team account features",
+      "Resume feedback & portfolio reviews"
     ],
-    limitations: [],
     cta: "Contact Sales",
-    popular: false,
-    color: "purple",
     highlight: false,
+    color: "purple",
+    period: "month",
+    featureMap: ["Unlimited", true, true, true, true, true, true, true, true, true],
   },
+]
+
+// 2. Feature matrix for table
+const featureMatrix = [
+  "AI-Powered Interview Attempts",
+  "Access to All Question Types",
+  "Access to Model Answers",
+  "Personalized Feedback",
+  "Career Insights Dashboard",
+  "Custom Interview Sets",
+  "Analytics + Progress Tracking",
+  "Resume & LinkedIn Optimization",
+  "1:1 Coach Support",
+  "Team / Org Management Features"
 ]
 
 const faqs = [
@@ -172,7 +172,8 @@ export default function PricingPage() {
   const { user, loading, signOut } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly")
+  // 3. Default to yearly pricing
+  const [billingCycle, setBillingCycle] = useState<'yearly' | 'monthly'>("yearly")
   const [expandedFeatures, setExpandedFeatures] = useState<string[]>([])
   const [processingPlan, setProcessingPlan] = useState<string | null>(null)
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
@@ -260,9 +261,9 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-950 dark:to-gray-800">
       {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm">
+      <header className="border-b bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
@@ -275,22 +276,23 @@ export default function PricingPage() {
                   style={{ width: "40px", height: "40px", borderRadius: "9px" }}
                 />
               </div>
-              <span className="text-xl font-bold text-gray-900">ResumePilot</span>
+              <span className="text-xl font-bold text-gray-900 dark:text-gray-100">ResumePilot</span>
             </Link>
 
             <div className="hidden md:flex items-center space-x-8">
-              <Link href="/#how-it-works" className="text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="/#how-it-works" className="text-gray-600 dark:text-gray-100 hover:text-gray-900 dark:hover:text-white transition-colors">
                 How It Works
               </Link>
-              <Link href="/#demo" className="text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="/#demo" className="text-gray-600 dark:text-gray-100 hover:text-gray-900 dark:hover:text-white transition-colors">
                 Demo
               </Link>
-              <Link href="/pricing" className="text-gray-600 hover:text-gray-900 transition-colors font-medium">
+              <Link href="/pricing" className="text-gray-600 dark:text-gray-100 hover:text-gray-900 dark:hover:text-white transition-colors font-medium">
                 Pricing
               </Link>
-              <Link href="/#faq" className="text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="/#faq" className="text-gray-600 dark:text-gray-100 hover:text-gray-900 dark:hover:text-white transition-colors">
                 FAQ
               </Link>
+              <ThemeToggle />
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -345,26 +347,26 @@ export default function PricingPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Hero Section */}
         <div className="text-center space-y-6 mb-16">
-          <h1 className="text-4xl lg:text-5xl font-bold text-gray-900">
+          <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 dark:text-gray-100">
             Choose Your{" "}
             <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               Perfect Plan
             </span>
           </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto dark:text-gray-300">
             Get AI-powered resume building with STAR and XYZ format bullets. Start with our $9 trial or choose a plan
             that fits your career goals.
           </p>
 
           {/* Billing Toggle */}
           <div className="flex items-center justify-center space-x-4 mt-8">
-            <span className={`text-sm ${billingCycle === "monthly" ? "text-gray-900 font-medium" : "text-gray-500"}`}>
+            <span className={`text-sm ${billingCycle === "monthly" ? "text-gray-900 dark:text-gray-100 font-medium" : "text-gray-500 dark:text-gray-400"}`}>
               Monthly
             </span>
             <button
               onClick={() => setBillingCycle(billingCycle === "monthly" ? "yearly" : "monthly")}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                billingCycle === "yearly" ? "bg-blue-600" : "bg-gray-200"
+                billingCycle === "yearly" ? "bg-blue-600 dark:bg-blue-700" : "bg-gray-200 dark:bg-gray-700"
               }`}
             >
               <span
@@ -373,11 +375,11 @@ export default function PricingPage() {
                 }`}
               />
             </button>
-            <span className={`text-sm ${billingCycle === "yearly" ? "text-gray-900 font-medium" : "text-gray-500"}`}>
+            <span className={`text-sm ${billingCycle === "yearly" ? "text-gray-900 dark:text-gray-100 font-medium" : "text-gray-500 dark:text-gray-400"}`}>
               Yearly
             </span>
             {billingCycle === "yearly" && (
-              <Badge variant="secondary" className="bg-green-100 text-green-700">
+              <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
                 Save up to 36%
               </Badge>
             )}
@@ -391,19 +393,11 @@ export default function PricingPage() {
               key={index}
               className={`relative transition-all duration-300 hover:scale-105 hover:shadow-xl ${
                 plan.highlight
-                  ? "border-2 border-blue-500 shadow-2xl scale-105 bg-gradient-to-b from-blue-50 to-white"
-                  : "border border-gray-200 hover:shadow-lg hover:border-blue-200"
+                  ? "border-2 border-blue-500 shadow-2xl scale-105 bg-gradient-to-b from-blue-50 to-white dark:from-blue-900 dark:to-gray-950"
+                  : "border border-gray-200 dark:border-gray-800 hover:shadow-lg hover:border-blue-200 dark:hover:border-blue-400 bg-white dark:bg-gray-900"
               }`}
             >
-              {plan.popular && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
-                  <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-1 shadow-lg">
-                    <Crown className="w-3 h-3 mr-1" />
-                    Most Popular
-                  </Badge>
-                </div>
-              )}
-
+              {/* Most Popular badge removed, not needed */}
               <CardHeader className="text-center pb-4">
                 <div className="space-y-3">
                   <div
@@ -411,10 +405,10 @@ export default function PricingPage() {
                       plan.highlight
                         ? "bg-gradient-to-r from-blue-500 to-purple-500"
                         : plan.color === "green"
-                          ? "bg-green-100"
+                          ? "bg-green-100 dark:bg-green-900"
                           : plan.color === "purple"
-                            ? "bg-purple-100"
-                            : "bg-gray-100"
+                            ? "bg-purple-100 dark:bg-purple-900"
+                            : "bg-gray-100 dark:bg-gray-800"
                     }`}
                   >
                     <plan.icon
@@ -422,87 +416,55 @@ export default function PricingPage() {
                         plan.highlight
                           ? "text-white"
                           : plan.color === "green"
-                            ? "text-green-600"
+                            ? "text-green-600 dark:text-green-400"
                             : plan.color === "purple"
-                              ? "text-purple-600"
-                              : "text-gray-600"
+                              ? "text-purple-600 dark:text-purple-400"
+                              : "text-gray-600 dark:text-gray-300"
                       }`}
                     />
                   </div>
                   <div>
-                    <CardTitle className="text-xl font-bold text-gray-900">{plan.name}</CardTitle>
-                    <CardDescription className="text-sm text-gray-600 mt-1">{plan.tagline}</CardDescription>
+                    <CardTitle className="text-xl font-bold text-gray-900 dark:text-gray-100">{plan.name}</CardTitle>
+                    <CardDescription className="text-sm text-gray-600 mt-1 dark:text-gray-300">{plan.tagline}</CardDescription>
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  {plan.originalPrice && billingCycle === "monthly" && (
-                    <div className="text-sm text-gray-400">
-                      <span className="line-through">Previously ${plan.originalPrice}/month</span>
-                    </div>
-                  )}
-
-                  <div className="flex items-baseline justify-center space-x-1">
-                    <span className="text-4xl font-bold text-gray-900">
-                      ${billingCycle === "yearly" && plan.yearlyPrice ? plan.yearlyPrice : plan.price}
-                    </span>
-                    <span className="text-gray-500">
-                      /{billingCycle === "yearly" && plan.yearlyPrice ? "year" : plan.period}
-                    </span>
-                  </div>
-
-                  {billingCycle === "yearly" && plan.yearlyPrice && plan.period !== "one-time" && (
-                    <div className="space-y-1">
-                      <p className="text-sm text-green-600 font-medium">
-                        Just ${(plan.yearlyPrice / 12).toFixed(2)}/month when billed annually
-                      </p>
-                      {plan.yearlyOriginal && (
-                        <p className="text-xs text-gray-500">
-                          <span className="line-through">${plan.yearlyOriginal}/year</span> • Save{" "}
-                          {calculateSavings(plan.price, plan.yearlyPrice)}%
-                        </p>
-                      )}
-                    </div>
+                {/* Pricing display */}
+                <div className="space-y-2 mt-4">
+                  {plan.period === "one-time" ? (
+                    <>
+                      <div className="flex items-baseline justify-center space-x-1">
+                        <span className="text-4xl font-bold text-gray-900 dark:text-gray-100">${plan.price}</span>
+                        <span className="text-gray-500 dark:text-gray-300">One-Time</span>
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-300">{plan.billingNote}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-baseline justify-center space-x-1">
+                        <span className="text-4xl font-bold text-gray-900 dark:text-gray-100">
+                          ${billingCycle === "yearly" ? plan.monthlyEquivalent : plan.monthly}
+                        </span>
+                        <span className="text-gray-500 dark:text-gray-300">/mo</span>
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-300">
+                        {billingCycle === "yearly"
+                          ? `Billed $${plan.yearly} yearly`
+                          : `Billed $${plan.monthly} monthly`}
+                      </div>
+                    </>
                   )}
                 </div>
               </CardHeader>
-
               <CardContent className="space-y-6">
-                <p className="text-sm text-gray-600 text-center">{plan.description}</p>
-
-                <div className="space-y-3">
-                  <Collapsible open={expandedFeatures.includes(plan.id)} onOpenChange={() => toggleFeatures(plan.id)}>
-                    <CollapsibleTrigger asChild>
-                      <Button variant="ghost" className="w-full justify-between p-0 h-auto text-sm font-medium">
-                        Features included
-                        {expandedFeatures.includes(plan.id) ? (
-                          <ChevronUp className="w-4 h-4" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4" />
-                        )}
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-2 mt-2">
-                      {plan.features.slice(0, 3).map((feature, featureIndex) => (
-                        <div key={featureIndex} className="flex items-start space-x-2">
-                          <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                          <span className="text-sm text-gray-600">{feature}</span>
-                        </div>
-                      ))}
-                      {plan.features.length > 3 && (
-                        <div className="space-y-2">
-                          {plan.features.slice(3).map((feature, featureIndex) => (
-                            <div key={featureIndex + 3} className="flex items-start space-x-2">
-                              <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                              <span className="text-sm text-gray-600">{feature}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </CollapsibleContent>
-                  </Collapsible>
-                </div>
-
+                <p className="text-sm text-gray-600 text-center dark:text-gray-300">{plan.description}</p>
+                <ul className="space-y-2 text-left mx-auto max-w-xs">
+                  {plan.features.map((feature, i) => (
+                    <li key={i} className="flex items-center text-gray-700 dark:text-gray-200">
+                      <Check className="w-4 h-4 text-green-500 mr-2" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
                 <Button
                   className={`w-full ${
                     plan.highlight
@@ -512,7 +474,7 @@ export default function PricingPage() {
                         : plan.color === "purple"
                           ? "bg-purple-600 hover:bg-purple-700"
                           : "bg-gray-600 hover:bg-gray-700"
-                  } text-white transition-all duration-200`}
+                  } text-white transition-all duration-200 dark:text-white`}
                   onClick={() => handleGetStarted(plan.id)}
                   disabled={processingPlan === plan.id}
                 >
@@ -525,26 +487,56 @@ export default function PricingPage() {
                     plan.cta
                   )}
                 </Button>
-
-                {plan.limitations.length > 0 && (
-                  <div className="pt-2 text-center">
-                    {plan.limitations.map((limitation, limitIndex) => (
-                      <p key={limitIndex} className="text-xs text-green-600 font-medium">
-                        {limitation}
-                      </p>
-                    ))}
-                  </div>
-                )}
               </CardContent>
             </Card>
           ))}
         </div>
 
+        {/* Feature Matrix Table */}
+        <div className="overflow-x-auto mb-20">
+          <table className="min-w-full border-collapse rounded-xl overflow-hidden bg-white dark:bg-gray-900 shadow-md">
+            <thead>
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800">Feature</th>
+                {pricingPlans.map((plan, idx) => (
+                  <th key={plan.id} className="px-4 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800">
+                    {plan.name.split(' ')[0]}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {featureMatrix.map((feature, rowIdx) => (
+                <tr key={feature} className={rowIdx % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'}>
+                  <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 font-medium">{feature}</td>
+                  {pricingPlans.map((plan, colIdx) => {
+                    const value = plan.featureMap[rowIdx];
+                    return (
+                      <td key={plan.id} className="px-4 py-2 text-center">
+                        {typeof value === 'boolean' ? (
+                          value ? <span className="text-green-500">&#10003;</span> : <span className="text-gray-400">&#8212;</span>
+                        ) : typeof value === 'number' ? (
+                          <span className="font-semibold text-blue-600 dark:text-blue-400">{value}</span>
+                        ) : value === 'Unlimited' ? (
+                          <span className="font-semibold text-purple-600 dark:text-purple-400">Unlimited</span>
+                        ) : (
+                          <span className="text-gray-400">&#8212;</span>
+                        )}
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">All features at a glance. <span className="font-medium">Save 30% with annual billing.</span></div>
+        </div>
+
         {/* Features Comparison */}
         <div className="mb-20">
           <div className="text-center space-y-4 mb-12">
-            <h2 className="text-3xl font-bold text-gray-900">Why Choose ResumePilot?</h2>
-            <p className="text-lg text-gray-600">Advanced AI technology meets professional resume writing</p>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Why Choose ResumePilot?</h2>
+            <p className="text-lg text-gray-600 dark:text-gray-300">Advanced AI technology meets professional resume writing</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -565,13 +557,13 @@ export default function PricingPage() {
                 description: "All templates pass through Applicant Tracking Systems with high success rates",
               },
             ].map((feature, index) => (
-              <Card key={index} className="text-center border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <Card key={index} className="text-center border-0 shadow-lg hover:shadow-xl transition-shadow bg-white dark:bg-gray-900">
                 <CardContent className="p-8 space-y-4">
                   <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center mx-auto">
                     <feature.icon className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900">{feature.title}</h3>
-                  <p className="text-gray-600">{feature.description}</p>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{feature.title}</h3>
+                  <p className="text-gray-600 dark:text-gray-300">{feature.description}</p>
                 </CardContent>
               </Card>
             ))}
@@ -581,16 +573,16 @@ export default function PricingPage() {
         {/* FAQ Section */}
         <div className="mb-20">
           <div className="text-center space-y-4 mb-12">
-            <h2 className="text-3xl font-bold text-gray-900">Frequently Asked Questions</h2>
-            <p className="text-lg text-gray-600">Everything you need to know about ResumePilot</p>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Frequently Asked Questions</h2>
+            <p className="text-lg text-gray-600 dark:text-gray-300">Everything you need to know about ResumePilot</p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-8">
             {faqs.map((faq, index) => (
-              <Card key={index} className="border border-gray-200 hover:shadow-md transition-shadow">
+              <Card key={index} className="border border-gray-200 dark:border-gray-800 hover:shadow-md transition-shadow bg-white dark:bg-gray-900">
                 <CardContent className="p-6">
-                  <h3 className="font-semibold text-gray-900 mb-3">{faq.question}</h3>
-                  <p className="text-gray-600 text-sm leading-relaxed">{faq.answer}</p>
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">{faq.question}</h3>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">{faq.answer}</p>
                 </CardContent>
               </Card>
             ))}
@@ -598,7 +590,7 @@ export default function PricingPage() {
         </div>
 
         {/* Final CTA Section */}
-        <div className="text-center space-y-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-12 text-white">
+        <div className="text-center space-y-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-12 text-white dark:from-blue-900 dark:to-purple-900 dark:text-white">
           <h2 className="text-3xl font-bold">Not sure which plan is right for you?</h2>
           <p className="text-xl opacity-90">Start with a $9 trial — you can upgrade anytime.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -631,7 +623,7 @@ export default function PricingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 mt-20">
+      <footer className="bg-gray-900 dark:bg-gray-950 text-white py-12 mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8">
             <div className="space-y-4">
@@ -645,9 +637,9 @@ export default function PricingPage() {
                     style={{ width: "40px", height: "40px", borderRadius: "9px" }}
                   />
                 </div>
-                <span className="text-xl font-bold">ResumePilot</span>
+                <span className="text-xl font-bold dark:text-gray-100">ResumePilot</span>
               </div>
-              <p className="text-gray-400 text-sm">
+              <p className="text-gray-400 dark:text-gray-300 text-sm">
                 AI-powered resume builder that helps software engineers craft compelling, ATS-optimized resumes with
                 STAR and XYZ format bullets through voice interviews.
               </p>
@@ -655,13 +647,13 @@ export default function PricingPage() {
             <div className="space-y-4">
               <h4 className="font-semibold">Product</h4>
               <div className="space-y-2 text-sm">
-                <Link href="/#how-it-works" className="block text-gray-400 hover:text-white transition-colors">
+                <Link href="/#how-it-works" className="block text-gray-400 dark:text-gray-300 hover:text-white dark:hover:text-white transition-colors">
                   How It Works
                 </Link>
-                <Link href="/#demo" className="block text-gray-400 hover:text-white transition-colors">
+                <Link href="/#demo" className="block text-gray-400 dark:text-gray-300 hover:text-white dark:hover:text-white transition-colors">
                   Demo
                 </Link>
-                <Link href="/pricing" className="block text-gray-400 hover:text-white transition-colors">
+                <Link href="/pricing" className="block text-gray-400 dark:text-gray-300 hover:text-white dark:hover:text-white transition-colors">
                   Pricing
                 </Link>
               </div>
@@ -669,13 +661,13 @@ export default function PricingPage() {
             <div className="space-y-4">
               <h4 className="font-semibold">Company</h4>
               <div className="space-y-2 text-sm">
-                <Link href="/about" className="block text-gray-400 hover:text-white transition-colors">
+                <Link href="/about" className="block text-gray-400 dark:text-gray-300 hover:text-white dark:hover:text-white transition-colors">
                   About
                 </Link>
-                <Link href="/contact" className="block text-gray-400 hover:text-white transition-colors">
+                <Link href="/contact" className="block text-gray-400 dark:text-gray-300 hover:text-white dark:hover:text-white transition-colors">
                   Contact
                 </Link>
-                <Link href="/privacy" className="block text-gray-400 hover:text-white transition-colors">
+                <Link href="/privacy" className="block text-gray-400 dark:text-gray-300 hover:text-white dark:hover:text-white transition-colors">
                   Privacy
                 </Link>
               </div>
@@ -685,19 +677,19 @@ export default function PricingPage() {
               <div className="space-y-2 text-sm">
                 <a
                   href="https://github.com/resumepilot"
-                  className="block text-gray-400 hover:text-white transition-colors"
+                  className="block text-gray-400 dark:text-gray-300 hover:text-white dark:hover:text-white transition-colors"
                 >
                   GitHub
                 </a>
                 <a
                   href="https://twitter.com/ResumePilot"
-                  className="block text-gray-400 hover:text-white transition-colors"
+                  className="block text-gray-400 dark:text-gray-300 hover:text-white dark:hover:text-white transition-colors"
                 >
                   Twitter (@ResumePilot)
                 </a>
                 <a
                   href="mailto:info@resumepilot.com"
-                  className="block text-gray-400 hover:text-white transition-colors"
+                  className="block text-gray-400 dark:text-gray-300 hover:text-white dark:hover:text-white transition-colors"
                 >
                   info@resumepilot.com
                 </a>

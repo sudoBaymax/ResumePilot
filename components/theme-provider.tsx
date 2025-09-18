@@ -15,6 +15,11 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
 
 export function ThemeToggle() {
   const { theme, setTheme, resolvedTheme } = useTheme()
+  const [mounted, setMounted] = React.useState(false)
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+  if (!mounted) return null
   return (
     <Button
       variant="ghost"
